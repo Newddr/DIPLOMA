@@ -4,6 +4,9 @@ import 'Word_screen.dart';
 import 'dictionary_class.dart';
 import 'dictionary_screen.dart';
 import 'words.dart';
+import 'package:http/http.dart' as http;
+import 'package:html/parser.dart' as parser;
+import 'package:html/dom.dart' as dom;
 
 void main() {
   runApp(MyApp());
@@ -40,6 +43,64 @@ class _MainPageState extends State<MainPage> {
     _loadRecentSearch();
 
   }
+  Future<List<String>> fetchWordsFromGramota(String query) async {
+    final Uri uri = Uri.parse('https://gramota.ru/poisk?query=$query*&mode=slovari');
+    print("URI= ,$uri");
+    final response = await http.get(uri);
+    print("response= ,$response");
+
+    if (response.statusCode == 200) {
+      // Парсинг HTML
+      dom.Document document = parser.parse(response.body);
+      List<String> words = [];
+      // Находим все элементы <a> с классом "item"
+      List<dom.Element> items = document.querySelectorAll('div.item > a');
+      // Берем первые 5 слов
+      for (int i = 0; i < items.length && i < 5; i++) {
+        words.add(items[i].text);
+      }
+      print("words= ,$words");
+      // Возвращаем список слов и вызываем setState
+      return words;
+    } else {
+      throw Exception('Failed to load words from Gramota');
+    }
+  }
+
+  void _performSearch(String query) async {
+    if (query.isEmpty) {
+      _clearSearch();
+      return;
+    }
+
+    try {
+      // Вызываем функцию fetchWordsFromGramota
+      List<String> words = await fetchWordsFromGramota(query);
+      // Обновляем состояние виджета
+      setState(() {
+        if(query.length<4 && words.isEmpty)
+          {
+            words.clear();
+            words.add('Введите еще парочку букв') ;
+          }
+        else{
+          if(query.length>4 && words.isEmpty){
+            words.clear();
+            words.add('К сожалению ничего не найдено, но мы обязательно это исправим') ;
+
+          }
+        }
+
+          searchResults = words;
+
+
+      });
+    } catch (e) {
+      print('Error fetching words: $e');
+      // Обработка ошибки, если запрос не удался
+      // Можно добавить какую-то логику обработки ошибки
+    }
+  }
   Future<void> _loadRecentSearch()
   async {
     List<Map<String, dynamic>> recentSearchresult =
@@ -62,19 +123,7 @@ class _MainPageState extends State<MainPage> {
     });
   }
   List<Map<String, dynamic>> searchResultsFromDB=[];
-  void _performSearch(String query) async {
-    if (query.isEmpty) {
-      _clearSearch();
-      return;
-    }
 
-    searchResultsFromDB =
-    await DBHelper.instance.searchWords(query);
-    setState(() {
-      searchResults =
-          searchResultsFromDB.map<String>((result) => result['name'] as String).toList();
-    });
-  }
   Future<void> _loadDictionaries() async {
     List<Map<String, dynamic>> dictionariesFromDB =
     await DBHelper.instance.getAllDictionaries();
@@ -225,10 +274,16 @@ class _MainPageState extends State<MainPage> {
                           ? ListView.builder(
                         itemCount: searchResults.length ,
                         itemBuilder: (context, index) {
+                          bool isClickable = true;
+                          if (searchResults[index] == "К сожалению ничего не найдено, но мы обязательно это исправим" || searchResults[index] == "Введите еще парочку букв") {
+                            isClickable = false;
+                          }
+                          print("searchResults[index] = ${searchResults[index]}");
                           return GestureDetector(
-                            onTap: () {
+                            onTap: isClickable
+                                ? () {
                               _onSearchResultTapped(searchResults[index]);
-                            },
+                            }: null,
                             child: Card(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(50),
@@ -411,7 +466,7 @@ class _MainPageState extends State<MainPage> {
                                 );
                               },
 
-                              onTap: () {
+                              onTap:() {
                                 print('Pressed on chip with ID: ${currentDictionary.id}');
                                 Navigator.push(
                                   context,
@@ -517,10 +572,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
   void _onSearchResultTapped(String word) {
-    // Добавить выбранный запрос в список последних запросов
 
-
-    // Остальной код не изменяется
     Map<String, dynamic> selectedWord = searchResultsFromDB.firstWhere(
           (result) => result['name'] == word,
       orElse: () => {'name': 'DefaultWordName'},
