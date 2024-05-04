@@ -571,20 +571,24 @@ class _MainPageState extends State<MainPage> {
       ),
     );
   }
-  void _onSearchResultTapped(String word) {
 
-    Map<String, dynamic> selectedWord = searchResultsFromDB.firstWhere(
-          (result) => result['name'] == word,
-      orElse: () => {'name': 'DefaultWordName'},
-    );
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WordScreen(word: selectedWord),
-      ),
-    );
+  void _onSearchResultTapped(String word) async {
+    // Проверяем, есть ли слово в локальной базе данных
+    Map<String, dynamic>? wordInfo = (await DBHelper.instance.getWordInfo(word)) as Map<String, dynamic>?;
+print("Нашли ? = $wordInfo");
+    if (wordInfo != null) {
+      // Если слово найдено в базе данных, выводим информацию из базы данных в карточку
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WordScreen(word: wordInfo),
+        ),
+      );
+    } else {
+      print('Пока что пусто, но будет парсер!');
+    }
   }
+
   Future<void> _deleteDictionary(int id) async {
     await DBHelper.instance.DeleteDictionary(id);
 

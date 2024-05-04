@@ -227,9 +227,26 @@ class DBHelper {
 
 
 
+  Future<Map<String, dynamic>?> getWordInfo(String word) async {
+    print('Searching for word: $word');
+    final db = await instance.database;
+    var resultSet = await db.query('InfoAboutWord', where: 'LOWER(name) = ?', whereArgs: [word.toLowerCase()]);
+    if (resultSet.isNotEmpty) {
+      return resultSet.first;
+    } else {
+      return null;
+    }
+  }
 
 
-  // String GetWord(index) {
+
+
+
+
+
+
+
+// String GetWord(index) {
   //   _loadWordsFromDatabase(index);
   //   return words[index]['text'];
   // }
