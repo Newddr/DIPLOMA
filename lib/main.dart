@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'package:windows1251/windows1251.dart';
 import 'package:flutter/material.dart';
+import 'package:html/parser.dart';
 import 'DB/DBHelper.dart';
 import 'Word_screen.dart';
 import 'dictionary_class.dart';
@@ -84,7 +87,7 @@ class _MainPageState extends State<MainPage> {
             words.add('Введите еще парочку букв') ;
           }
         else{
-          if(query.length>4 && words.isEmpty){
+          if(query.length>=4 && words.isEmpty){
             words.clear();
             words.add('К сожалению ничего не найдено, но мы обязательно это исправим') ;
 
@@ -572,7 +575,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _onSearchResultTapped(String word) async {
+  Future<List<String>?> _onSearchResultTapped(String word) async {
     // Проверяем, есть ли слово в локальной базе данных
     Map<String, dynamic>? wordInfo = (await DBHelper.instance.getWordInfo(word)) as Map<String, dynamic>?;
 print("Нашли ? = $wordInfo");
@@ -586,7 +589,69 @@ print("Нашли ? = $wordInfo");
       );
     } else {
       print('Пока что пусто, но будет парсер!');
+      final response = await http.get(Uri.parse('http://classic.gramota.ru/slovari/dic/?word=$word&all=x'));
+
+      if (response.statusCode == 200) {
+        // Декодируем тело ответа в кодировке windows-1251
+        final decodedBody = windows1251.decode(response.bodyBytes);
+        final document = parse(decodedBody);
+
+        final definitionsBlocks = document.querySelectorAll('div[style="padding-left:50px"]');
+        final definitionsList = definitionsBlocks.map((block) {
+          // Инициализируем текст определения
+          String definitionsText = block.text;
+
+          // Находим все теги <span class="accent"> внутри тега <b>
+          final accentTags = block.querySelectorAll('b > span.accent');
+          for (final accentTag in accentTags) {
+            // Заменяем текст внутри тега <span class="accent"> на текст с ударением
+            definitionsText = definitionsText.replaceFirst(accentTag.text,  "'"+accentTag.text);
+          }
+
+          return definitionsText;
+        }).toList();
+
+        final createdAt = DateTime.now().toIso8601String();
+        var id=await DBHelper.instance.getLastId();
+        final Map<String, dynamic> valuesToInsert = {
+          'id_word': (id!+1),
+          'name': word,
+          'created_at': createdAt,
+          'is_pinned': 0,
+          'color': 'ffffffff',
+          'spelling_value': definitionsList[0],
+          'sensible_value': definitionsList[1],
+          'accent_value': definitionsList[2],
+          'sobstven': definitionsList[3],
+          'synonym_value': definitionsList[4],
+          'spavochnic': definitionsList[5],
+          'antonym_value': definitionsList[6],
+          'examples_value': definitionsList[7],
+          'translate_value': definitionsList[8]
+        };
+
+        await DBHelper.instance.addTempWord(valuesToInsert,0);
+        // Преобразуем список определений в Map<String, dynamic>
+        final definitionsMap = {'$word': definitionsList};
+        print('valuesToInsert= $valuesToInsert');
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WordScreen(word: valuesToInsert),
+          ),
+        );
+        print('definitionsMap: $definitionsMap');
+      } else {
+        print('Ошибка: Не удалось получить доступ к странице для слова "$word"');
+      }
+
+
+
+
+
     }
+
   }
 
   Future<void> _deleteDictionary(int id) async {
@@ -617,6 +682,65 @@ else if(lastDigit==1)return '${a.length} слово';
     return '${a.length} слова';
   }
 }
+
+class BeautifulSoup {
+  final String data;
+
+  BeautifulSoup(this.data);
+
+  Iterable<HtmlTag> find_all(String name, {required Map<String, String> attrs}) sync* {
+    var regExp = RegExp('<$name.*?>(.*?)</$name>', dotAll: true);
+    var matches = regExp.allMatches(data);
+    for (var match in matches) {
+      var group = match.group(0);
+      if (group != null) {
+        yield HtmlTag(group);
+      }
+    }
+  }
+}
+class HtmlTag {
+  final String data;
+
+  HtmlTag(this.data);
+
+  String? operator [](String key) {
+    var regExp = RegExp('$key="([^"]+)"');
+    var match = regExp.firstMatch(data);
+    if (match != null) {
+      return match.group(1);
+    }
+    return null;
+  }
+
+  String? get name {
+    var regExp = RegExp('<([^\\s>/]+)');
+    var match = regExp.firstMatch(data);
+    if (match != null) {
+      return match.group(1);
+    }
+    return null;
+  }
+
+  String? get text {
+    var regExp = RegExp(r'>([^<>]*)<');
+    var match = regExp.firstMatch(data);
+    if (match != null) {
+      return match.group(1);
+    }
+    return null;
+  }
+
+  List<HtmlTag> get children {
+    var regExp = RegExp(r'>([^<>]*)</');
+    var match = regExp.firstMatch(data);
+    if (match != null) {
+      return [HtmlTag(match.group(1)!)]; // Используйте !, чтобы убедиться, что строка не null
+    }
+    return [];
+  }
+}
+
 
 
 

@@ -280,6 +280,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "13.0.0"
+  windows1251:
+    dependency: "direct main"
+    description:
+      name: windows1251
+      sha256: dd636a296383fdde7f85a861961484b8249e4159a559240bf50cf913348aaa18
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
 sdks:
   dart: ">=3.3.0 <4.0.0"
   flutter: ">=3.7.0"

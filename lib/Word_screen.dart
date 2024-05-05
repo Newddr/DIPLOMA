@@ -178,7 +178,7 @@ class _WordScreenState extends State<WordScreen> {
                             title: Text(dictionaryesLocal[index].value),
                             trailing: InkWell(
                               onTap: () async{
-                                _changeStateWord(dictionaryesLocal[index].id)?null:await _addToDic(dictionaryesLocal[index].id,widget.word['id_word']);
+                                _changeStateWord(dictionaryesLocal[index].id)?null:await _addToDic(dictionaryesLocal[index].id,widget);
                                 setState(() {});
                               },
                               child: _changeStateWord(dictionaryesLocal[index].id)
@@ -205,8 +205,10 @@ class _WordScreenState extends State<WordScreen> {
     );
   }
 
-  Future<void> _addToDic(id,id_word) async {
+  Future<void> _addToDic(id,word) async {
+    var id_word =word.word['id_word'];
     await DBHelper.instance.addToDictionary(id, id_word);
+    await DBHelper.instance.addTempWord(word.word,1);
     print("ff- $id_word");
     setState(() {
       dictionariesID.add(id);

@@ -194,7 +194,7 @@ class DBHelper {
   }
   Future<void> addToDictionary(int id, int idWord) async {
     final db = await instance.database;
-
+  print('id word = $id and idWord = $idWord');
     var a= await db.insert(
       'DictionaryesWords',
       {'id': id, 'id_word': idWord},
@@ -237,10 +237,90 @@ class DBHelper {
       return null;
     }
   }
+  Future<void> addTempWord(valuesToInsert, addToMain) async {
+    final db = await instance.database;
+    var table=addToMain==0?'tempWords':'InfoAboutWord';
+    await db.execute('''CREATE TABLE IF NOT EXISTS $table (
+     id_word INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          created_at TEXT,
+          is_pinned INTEGER,
+          color TEXT,
+          spelling_value TEXT,
+          sensible_value TEXT,
+          accent_value TEXT,
+          sobstven TEXT,
+          synonym_value TEXT,
+          spavochnic TEXT,
+          antonym_value TEXT,
+          examples_value TEXT,
+          translate_value TEXT
+    )''');
+    Map<String, dynamic>? wordInfo = await getWordInfo(valuesToInsert['name']);
+
+    // Проверяем, что слово не найдено, прежде чем вставлять его
+    if (wordInfo == null) {
+     await db.insert(table,
+      {'id_word': valuesToInsert['id_word'], 'name': valuesToInsert['name'],'created_at' :valuesToInsert['created_at'] ,
+        'is_pinned':valuesToInsert['is_pinned'],
+        'color':valuesToInsert['color'],
+        'spelling_value':valuesToInsert['spelling_value'],
+        'sensible_value':valuesToInsert['sensible_value'],
+        'accent_value':valuesToInsert['accent_value'],
+        'sobstven':valuesToInsert['sobstven'],
+        'synonym_value':valuesToInsert['synonym_value'],
+        'spavochnic':valuesToInsert['spavochnic'],
+        'antonym_value':valuesToInsert['antonym_value'],
+        'examples_value':valuesToInsert['examples_value'],
+        'translate_value':valuesToInsert['translate_value']},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );}
+
+
+  }
+
+  Future<int?> getLastId() async {
+    final db = await instance.database;
+    var resultSet = await db.rawQuery('SELECT MAX(id_word) AS max_id FROM InfoAboutWord');
+    int? id_max=0;
+    if (resultSet.isNotEmpty ) {
+
+      id_max = resultSet.first['max_id'] as int?;
+    }
+    var tableExistsResult = await db.rawQuery('SELECT name FROM sqlite_master WHERE type="table" AND name="tempWords"');
+    if (tableExistsResult.isNotEmpty) {
+      var resultSet1 = await db.rawQuery(
+          'SELECT MAX(id_word) AS max_id FROM tempWords');
+      print('isnull=$resultSet1');
+      if(resultSet1.first['max_id'] != null)
+        {
+          if(resultSet1.first['max_id'] as int > id_max!){
+            id_max=resultSet1.first['max_id'] as int?;
+        }
+
+      }
+      if(resultSet.isEmpty && resultSet1.isEmpty)
+      {
+        return 0;
+      }
+    }
+    else{
+      if(resultSet.isEmpty)
+      {
+        return 0;
+      }
+
+    }
+    return id_max;
+  }
 
 
 
 
+
+
+
+// Простой класс для анализа HTML
 
 
 
