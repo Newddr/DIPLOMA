@@ -39,19 +39,23 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
   Future<void> _recre() async {
     await DBHelper.instance.recreateDatabase();
   }
-
+  late List<Map<String, dynamic>> pinnedWords;
+  late List<Map<String, dynamic>> unpinnedWords;
   Future<void> _loadWordsFromDatabase() async {
     List<Map<String, dynamic>> loadedWords = await DBHelper.instance
-        .getWordsQuery(id);
+        .getPinnedWords(id);
+    List<Map<String, dynamic>> loadedWordsUnPinned = await DBHelper.instance
+        .getUnPinnedWords(id);
 
     // Сначала добавляем закрепленные слова
-    List<Map<String, dynamic>> pinnedWords = loadedWords
-        .where((word) => word['is_pinned'] == 1)
+     pinnedWords = loadedWords
         .toList();
-    List<Map<String, dynamic>> unpinnedWords = loadedWords
-        .where((word) => word['is_pinned'] != 1)
+     unpinnedWords = loadedWordsUnPinned
         .toList();
-
+    print('pinnedWords= $pinnedWords');
+    print('loadedWords= $loadedWords');
+    print('loadedWordsUnPinned= $loadedWordsUnPinned');
+    print('unpinned= $unpinnedWords');
     setState(() {
       words = [...pinnedWords, ...unpinnedWords];
     });
@@ -100,7 +104,8 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
         itemCount: words.length,
         itemBuilder: (context, index) {
           bool isSelected = selectedCardIndices.contains(index);
-          bool isPinned = words[index]['is_pinned'] == 0 ? false : true;
+          bool isPinned = pinnedWords.contains(words[index]);
+          print("isPinned= $isPinned");
 
           return Card(
             color: isSelected
@@ -203,8 +208,8 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
 
   void _pinSelectedWords() async {
     for (var index in selectedCardIndices) {
-      int pinStatus= words[selectedCardIndices[0]]['is_pinned']==1?0:1;
-      await DBHelper.instance.pinWord(words[index]['id_word'],pinStatus);
+      int pinStatus= await DBHelper.instance.isPinned(widget.id,words[index]['id_word'])==1?0:1;
+      await DBHelper.instance.pinWord(widget.id,words[index]['id_word'],pinStatus);
 
     }
     updateList();

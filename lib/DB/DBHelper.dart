@@ -31,16 +31,17 @@ class DBHelper {
         id_word INTEGER PRIMARY KEY,
         name TEXT,
         created_at TEXT,
-        is_pinned INTEGER,
-        color TEXT,
-        spelling_value TEXT,
-        sensible_value TEXT,
-        synonym_value TEXT,
-        antonym_value TEXT,
-        accent_value TEXT,
-        methodical_value TEXT,
-        examples_value TEXT,
-        translate_value TEXT
+          is_pinned INTEGER,
+          color TEXT,
+          spelling_value TEXT,
+          sensible_value TEXT,
+          accent_value TEXT,
+          sobstven TEXT,
+          synonym_value TEXT,
+          spavochnic TEXT,
+          antonym_value TEXT,
+          examples_value TEXT,
+          translate_value TEXT
       )
     ''');
     await db.execute('''CREATE TABLE IF NOT EXISTS Dictionaryes (
@@ -49,7 +50,8 @@ class DBHelper {
     )''');
     await db.execute('''CREATE TABLE IF NOT EXISTS DictionaryesWords (
       id INTEGER,
-      id_word INTEGER
+      id_word INTEGER,
+      is_pinned bool
     )''');
   }catch (e) {
   print('Error during database creation: $e');
@@ -107,6 +109,41 @@ class DBHelper {
     FROM InfoAboutWord i
     JOIN DictionaryesWords d ON i.id_word = d.id_word
     WHERE d.id = $dictionaryId
+  ''');
+
+  }
+  Future<List<Map<String, dynamic>>> getPinnedWords(int dictionaryId) async {
+    final db = await instance.database;
+    print("id= $dictionaryId");
+    final b = await db.rawQuery('''
+    SELECT i.*
+    FROM InfoAboutWord i
+    JOIN DictionaryesWords d ON i.id_word = d.id_word
+    WHERE d.id = $dictionaryId AND d.is_pinned = true
+  ''');
+    print("query= $b");
+    return b;
+
+  }
+  Future<List<Map<String, dynamic>>> getUnPinnedWords(int dictionaryId) async {
+    final db = await instance.database;
+
+    final a= await db.rawQuery('''
+    SELECT i.*
+    FROM InfoAboutWord i
+    JOIN DictionaryesWords d ON i.id_word = d.id_word
+    WHERE d.id = $dictionaryId AND d.is_pinned = 'false'
+  ''');
+    print("queryUnPinned= $a");
+    return a;
+
+  }
+  Future<List<Map<String, dynamic>>> isPinned(int dictionaryId, int id_word) async {
+    final db = await instance.database;
+    return await db.rawQuery('''
+    SELECT is_pinned
+    FROM DictionaryesWords
+    WHERE id = $dictionaryId AND id_word = $id_word
   ''');
 
   }
@@ -175,13 +212,13 @@ class DBHelper {
     )}");
     print("COLORED to ${newColor}");
   }
-  Future<void> pinWord(int idWord,int pinStat) async {
+  Future<void> pinWord(int id_dict,int idWord,int pinStat) async {
     final db = await instance.database;
     await db.update(
-      'InfoAboutWord',
+      'DictionaryesWords',
       {'is_pinned': pinStat}, // 1 - значит, что слово закреплено, вы можете использовать любые значения для представления статуса
-      where: 'id_word = ?',
-      whereArgs: [idWord],
+      where: 'id_word = ? and id = ?',
+      whereArgs: [idWord,id_dict],
     );
   }
 
@@ -197,7 +234,7 @@ class DBHelper {
   print('id word = $id and idWord = $idWord');
     var a= await db.insert(
       'DictionaryesWords',
-      {'id': id, 'id_word': idWord},
+      {'id': id, 'id_word': idWord,'is_pinned':'false'},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     print('result=$a');

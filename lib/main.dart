@@ -10,11 +10,46 @@ import 'words.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as parser;
 import 'package:html/dom.dart' as dom;
+import 'package:connectivity/connectivity.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(MyApp());
 }
-
+void _requestStoragePermission(BuildContext context) async {
+  PermissionStatus status = await Permission.storage.status;
+  if (!status.isGranted) {
+    PermissionStatus result = await Permission.storage.request();
+    if (result.isGranted) {
+      print('Разрешение выдано');
+    } else {
+      print('Разрешение не выдано');
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Важно'),
+            content: Text('Без доступа к файлам, вы не сможете сохранять слова в личный словарь.'),
+            actions: [
+              TextButton(
+                child: Text('Понял'),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Закрыть диалоговое окно
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+  } else {
+    print('Разрешение выдано');
+  }
+}
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -42,6 +77,7 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
+    _requestStoragePermission(context);
     _loadDictionaries();
     _loadRecentSearch();
 
@@ -69,7 +105,19 @@ class _MainPageState extends State<MainPage> {
       throw Exception('Failed to load words from Gramota');
     }
   }
+  void _performSearchFromLocal(String query) async {
+    if (query.isEmpty) {
+      _clearSearch();
+      return;
+    }
 
+    searchResultsFromDB =
+    await DBHelper.instance.searchWords(query);
+    setState(() {
+      searchResults =
+          searchResultsFromDB.map<String>((result) => result['name'] as String).toList();
+    });
+  }
   void _performSearch(String query) async {
     if (query.isEmpty) {
       _clearSearch();
@@ -122,7 +170,8 @@ class _MainPageState extends State<MainPage> {
   }
   void updateMainPage() {
     setState(() {
-      _loadDictionaries();// Здесь вы можете обновить переменные состояния или выполнить другие действия при необходимости
+      _loadDictionaries();
+      _loadRecentSearch();
     });
   }
   List<Map<String, dynamic>> searchResultsFromDB=[];
@@ -206,6 +255,15 @@ class _MainPageState extends State<MainPage> {
     }
     await _loadDictionaries();
   }
+  Future<bool> hasInternetConnection() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.mobile ||
+        connectivityResult == ConnectivityResult.wifi) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -238,14 +296,14 @@ class _MainPageState extends State<MainPage> {
                     controller: _searchController,
                     onChanged: (query) {
                       if (_selectedIndex == 1) {
-                        _performSearch(query);
+                        hasInternetConnection()!=false? _performSearch(query): _performSearchFromLocal(query);
                       } else if (_selectedIndex == 2) {
                         _performDictionarySearch(query);
                       }
                     },
                     decoration: InputDecoration(
                       prefixIcon: Icon(Icons.search),
-                      hintText: "Search",
+                      hintText: "Поиск",
                       contentPadding: EdgeInsets.all(20),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(50),
@@ -590,7 +648,7 @@ print("Нашли ? = $wordInfo");
     } else {
       print('Пока что пусто, но будет парсер!');
       final response = await http.get(Uri.parse('http://classic.gramota.ru/slovari/dic/?word=$word&all=x'));
-
+      print('responce= ${response.statusCode}');
       if (response.statusCode == 200) {
         // Декодируем тело ответа в кодировке windows-1251
         final decodedBody = windows1251.decode(response.bodyBytes);
@@ -613,6 +671,8 @@ print("Нашли ? = $wordInfo");
 
         final createdAt = DateTime.now().toIso8601String();
         var id=await DBHelper.instance.getLastId();
+        print(id);
+        id ??= 0;
         final Map<String, dynamic> valuesToInsert = {
           'id_word': (id!+1),
           'name': word,

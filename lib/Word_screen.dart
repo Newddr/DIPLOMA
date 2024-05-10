@@ -77,6 +77,7 @@ class _WordScreenState extends State<WordScreen> {
         child: ListView(
 
           children: List.generate(types.length, (index) {
+            print('text=${_getValue(types[index])}');
             return Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(50),
