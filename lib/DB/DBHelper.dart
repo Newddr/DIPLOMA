@@ -51,7 +51,7 @@ class DBHelper {
     await db.execute('''CREATE TABLE IF NOT EXISTS DictionaryesWords (
       id INTEGER,
       id_word INTEGER,
-      is_pinned bool
+      is_pinned int
     )''');
   }catch (e) {
   print('Error during database creation: $e');
@@ -119,7 +119,7 @@ class DBHelper {
     SELECT i.*
     FROM InfoAboutWord i
     JOIN DictionaryesWords d ON i.id_word = d.id_word
-    WHERE d.id = $dictionaryId AND d.is_pinned = true
+    WHERE d.id = $dictionaryId AND d.is_pinned = 1
   ''');
     print("query= $b");
     return b;
@@ -132,7 +132,7 @@ class DBHelper {
     SELECT i.*
     FROM InfoAboutWord i
     JOIN DictionaryesWords d ON i.id_word = d.id_word
-    WHERE d.id = $dictionaryId AND d.is_pinned = 'false'
+    WHERE d.id = $dictionaryId AND d.is_pinned = 0
   ''');
     print("queryUnPinned= $a");
     return a;
@@ -234,7 +234,7 @@ class DBHelper {
   print('id word = $id and idWord = $idWord');
     var a= await db.insert(
       'DictionaryesWords',
-      {'id': id, 'id_word': idWord,'is_pinned':'false'},
+      {'id': id, 'id_word': idWord,'is_pinned':0},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     print('result=$a');

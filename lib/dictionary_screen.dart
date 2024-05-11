@@ -208,8 +208,9 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
 
   void _pinSelectedWords() async {
     for (var index in selectedCardIndices) {
-      int pinStatus= await DBHelper.instance.isPinned(widget.id,words[index]['id_word'])==1?0:1;
-      await DBHelper.instance.pinWord(widget.id,words[index]['id_word'],pinStatus);
+      var pinStatusResult = await DBHelper.instance.isPinned(widget.id, words[index]['id_word']);
+      var isPinned =pinStatusResult.first['is_pinned']==1?0:1;
+      await DBHelper.instance.pinWord(widget.id,words[index]['id_word'],isPinned);
 
     }
     updateList();
