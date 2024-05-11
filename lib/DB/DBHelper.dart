@@ -239,6 +239,21 @@ class DBHelper {
     );
     print('result=$a');
   }
+  Future<void> updateDefinition(int id_word,String dictionary, String definition) async {
+    final db = await instance.database;
+    print('id_word=$id_word');
+    print('dictionary=$dictionary');
+    print('definition=$definition');
+    var a= await db.update(
+      'InfoAboutWord',
+      {dictionary: definition},
+      where: 'id_word = ?',
+      whereArgs: [id_word],
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    print('updated=$a');
+  }
   Future<void> addDictionaryToDB(String name,id_word) async {
     final db = await instance.database;
     var id = DateTime.now().millisecondsSinceEpoch; // генерируем уникальный идентификатор

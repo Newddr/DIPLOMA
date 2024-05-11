@@ -24,6 +24,7 @@ class _WordScreenState extends State<WordScreen> {
   var types = ['spelling_value', 'sensible_value','accent_value', 'sobstven','synonym_value', 'spavochnic','antonym_value', 'examples_value'];
   var types_ru=['Офрфографический словарь','Толковый словарь','Словарь ударений русского языка','Словарь имен собственных','Словарь синонимов','Словарь методических терминов','Словарь антонимов','Словарь примеров использования'];
   var dictionariesID = [];
+  var definitions = [];
   String _newDictionaryName ="";
 
   @override
@@ -32,9 +33,9 @@ class _WordScreenState extends State<WordScreen> {
     _loadDictionaries();
     _loadInfoFromBD();
   }
-
+  late List<Map<String, dynamic>> dictionariesFromDB;
   Future<void> _loadDictionaries() async {
-    List<Map<String, dynamic>> dictionariesFromDB =
+    dictionariesFromDB =
     await DBHelper.instance.getAllDictionaries();
     print('Dics-${dictionariesFromDB}');
 
@@ -56,6 +57,10 @@ class _WordScreenState extends State<WordScreen> {
           .map((map) => map['id'] as int)
           .toList();
     });
+    types.forEach((type) {
+      String definition = _getValue(type);
+      definitions.add(definition);
+    });
     print('34234234-${dictionariesID}');
   }
 
@@ -75,34 +80,38 @@ class _WordScreenState extends State<WordScreen> {
       body: Container(
         color: Colors.white,
         child: ListView(
-
           children: List.generate(types.length, (index) {
-            print('text=${_getValue(types[index])}');
+
             return Card(
+                key: ValueKey(index),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(50),
               ),
               child: Padding(
                 padding: EdgeInsets.all(20.0),
-                child: Column(
-
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      types_ru[index],
-                      style: TextStyle(
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
+                child: InkWell(
+                  onLongPress: () {
+                    _showEditDefinitionModal(types[index]);
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        types_ru[index],
+                        style: TextStyle(
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    Padding(padding: EdgeInsets.all(10.0)),
-                    Text(
-                      _getValue(types[index]),
-                      style: TextStyle(
-                        fontSize: 14.0,
+                      Padding(padding: EdgeInsets.all(10.0)),
+                      Text(
+                        definitions[index],
+                        style: TextStyle(
+                          fontSize: 14.0,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -110,6 +119,55 @@ class _WordScreenState extends State<WordScreen> {
         ),
       ),
     );
+  }
+  Future<void> _showEditDefinitionModal(dictionaryType) async {
+    print('dictionaryType= $dictionaryType');
+    final TextEditingController _textController = TextEditingController(text: _getValue(dictionaryType) ); // добавлен предустановленный текст
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // пользователь должен нажать кнопку, чтобы закрыть модальное окно
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Редактировать определение'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                TextField(
+                  controller: _textController,
+                  maxLines: 8, // позволяет неограниченное количество строк
+                  minLines: 1,
+                  decoration: InputDecoration(
+                    hintText: 'Введите новое определение',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Отмена'),
+              onPressed: () {
+
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Сохранить'),
+              onPressed: ()
+              async {
+                String newDefinition = _textController.text;
+                await _updateDefinition(dictionaryType,newDefinition);
+                setState(() {
+                });
+                Navigator.of(context).pop();
+            },
+            ),
+          ],
+        );
+      },
+    );
+
   }
 
 
@@ -215,6 +273,15 @@ class _WordScreenState extends State<WordScreen> {
       dictionariesID.add(id);
     });
   }
+  Future<void> _updateDefinition(dictionary,newDefinition) async {
+    await DBHelper.instance.updateDefinition(widget.word['id_word'],dictionary, newDefinition);
+
+    setState(() {
+      int indDict=types.indexOf(dictionary);
+      definitions[indDict]=newDefinition;
+    });
+    }
+
   Future<void> _createNewDictionary(BuildContext context) async {
     showDialog(
       context: context,
