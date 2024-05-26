@@ -1,7 +1,9 @@
 import 'package:expandable_text/expandable_text.dart';
 import 'package:flutter/material.dart';
+import 'package:slovar/utils/constants.dart';
 import 'dictionary_class.dart';
 import 'DB/DBHelper.dart';
+
 
 
 
@@ -22,7 +24,7 @@ class _WordScreenState extends State<WordScreen> {
   bool firstLoad = true;
   var dictionaryesLocal = [];
   var types = ['spelling_value', 'sensible_value','accent_value', 'sobstven','synonym_value', 'spavochnic','antonym_value', 'examples_value'];
-  var types_ru=['Офрфографический словарь','Толковый словарь','Словарь ударений русского языка','Словарь имен собственных','Словарь синонимов','Словарь методических терминов','Словарь антонимов','Словарь примеров использования'];
+  var types_ru=['Орфографический словарь','Толковый словарь','Словарь ударений русского языка','Словарь имен собственных','Словарь синонимов','Словарь методических терминов','Словарь антонимов','Словарь примеров использования'];
   var dictionariesID = [];
   var definitions = [];
   String _newDictionaryName ="";
@@ -68,6 +70,7 @@ class _WordScreenState extends State<WordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+          backgroundColor: kButtonColorSearch,
           title: Text(widget.word['name']),
           actions: [
             IconButton(
@@ -83,9 +86,15 @@ class _WordScreenState extends State<WordScreen> {
           children: List.generate(types.length, (index) {
 
             return Card(
+              color: kCardColor,
+              elevation: 0,
                 key: ValueKey(index),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(50),
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: kButtonColorSearch, // Цвет обводки
+                  width: 2, // Ширина обводки
+                ),
               ),
               child: Padding(
                 padding: EdgeInsets.all(20.0),
@@ -104,10 +113,10 @@ class _WordScreenState extends State<WordScreen> {
                         ),
                       ),
                       Padding(padding: EdgeInsets.all(10.0)),
-                      Text(
-                        definitions[index],
-                        style: TextStyle(
-                          fontSize: 14.0,
+                      RichText(
+                        text: TextSpan(
+                          style: TextStyle(fontSize: 14.0, color: Colors.black),
+                          children: processString(definitions[index]),
                         ),
                       ),
                     ],
@@ -119,6 +128,24 @@ class _WordScreenState extends State<WordScreen> {
         ),
       ),
     );
+  }
+  List<TextSpan> processString(String input) {
+    final spans = <TextSpan>[];
+    bool isNextCharRed = false;
+
+    for (int i = 0; i < input.length; i++) {
+      if (input[i] == "'") {
+        isNextCharRed = true;
+      } else {
+        spans.add(TextSpan(
+          text: input[i],
+          style: TextStyle(color: isNextCharRed ? Colors.red : Colors.black),
+        ));
+        isNextCharRed = false;
+      }
+    }
+
+    return spans;
   }
   Future<void> _showEditDefinitionModal(dictionaryType) async {
     print('dictionaryType= $dictionaryType');

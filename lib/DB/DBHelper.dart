@@ -51,7 +51,8 @@ class DBHelper {
     await db.execute('''CREATE TABLE IF NOT EXISTS DictionaryesWords (
       id INTEGER,
       id_word INTEGER,
-      is_pinned int
+      is_pinned int,
+      color_word string
     )''');
   }catch (e) {
   print('Error during database creation: $e');
@@ -201,17 +202,43 @@ class DBHelper {
     print(await db.delete('Dictionaryes', where: 'id = ?', whereArgs: [id]));
     await db.delete('DictionaryesWords', where: 'id = ?', whereArgs: [id]);
   }
-  Future<void> ChangeColor(int id, String newColor) async {
+  Future<void> ChangeColor(int id, String newColor, int id_dict) async {
     final db = await instance.database;
     print('ID_WORD=${id}');
-    print("TRY COLOR ${await db.update(
-      'InfoAboutWord',
-      {'color': newColor},
-      where: 'id_word = ?',
-      whereArgs: [id],
-    )}");
+    await db.update(
+      'DictionaryesWords',
+      {'color_word': newColor},
+      where: 'id = ? and id_word = ?',
+      whereArgs: [id_dict,id],
+    );
     print("COLORED to ${newColor}");
   }
+  Future<Map<String, List<int>>> getColorMap(int id_dict) async {
+    final db = await instance.database;
+    final words = await db.query(
+      'DictionaryesWords',
+      where: 'id = ?',
+      whereArgs: [id_dict],
+    );
+    print("words==$words");
+
+    Map<String, List<int>> colorMap = {};
+
+    for (final element in words) {
+      final colorWord = element['color_word'] as String;
+      final idWord = element['id_word'] as int;
+
+      if (colorMap.containsKey(colorWord)) {
+        colorMap[colorWord]!.add(idWord);
+      } else {
+        colorMap[colorWord] = [idWord];
+      }
+    }
+    print("colorMap==$colorMap");
+
+    return colorMap;
+  }
+
   Future<void> pinWord(int id_dict,int idWord,int pinStat) async {
     final db = await instance.database;
     await db.update(
@@ -234,7 +261,7 @@ class DBHelper {
   print('id word = $id and idWord = $idWord');
     var a= await db.insert(
       'DictionaryesWords',
-      {'id': id, 'id_word': idWord,'is_pinned':0},
+      {'id': id, 'id_word': idWord,'is_pinned':0,'color_word':"ffffff"},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     print('result=$a');

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:slovar/Word_screen.dart';
-
+import 'package:slovar/addWordScreen.dart';
+import 'package:slovar/utils/constants.dart';
 import 'DB/DBHelper.dart';
 import 'main.dart';
 import 'package:slovar/main.dart';
@@ -19,6 +20,8 @@ class DictionariesScreen extends StatefulWidget {
   @override
   _DictionariesScreenState createState() => _DictionariesScreenState();
 }
+var types = ['spelling_value', 'sensible_value','accent_value', 'sobstven','synonym_value', 'spavochnic','antonym_value', 'examples_value'];
+var types_ru=['Орфографический словарь','Толковый словарь','Словарь ударений русского языка','Словарь имен собственных','Словарь синонимов','Словарь методических терминов','Словарь антонимов','Словарь примеров использования'];
 
 int i=0;
 class _DictionariesScreenState extends State<DictionariesScreen> {
@@ -34,12 +37,16 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
   void initState() {
     super.initState();
     _loadWordsFromDatabase();
+    fetchData();
   }
 
   Future<void> _recre() async {
     await DBHelper.instance.recreateDatabase();
   }
   late List<Map<String, dynamic>> pinnedWords;
+  Map<String, List<int>> colorMap={};
+
+
   late List<Map<String, dynamic>> unpinnedWords;
   Future<void> _loadWordsFromDatabase() async {
     List<Map<String, dynamic>> loadedWords = await DBHelper.instance
@@ -60,14 +67,58 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
       words = [...pinnedWords, ...unpinnedWords];
     });
   }
+  void fetchData() async {
+   colorMap = await DBHelper.instance.getColorMap(id);
 
-  Color getColorFromString(String hexColor) {
-    // Примеры строк цветов: "red", "blue", "green", и так далее
+  }
+  Color getColorFromString(int id) {
+    var hexColor ="ffffff";
+    for (var entry in colorMap.entries) {
+      print('______________________________ $id');
+      if (entry.value.contains(id)) {
+        hexColor =  entry.key;
+      }
+    }
     try{int value = int.parse(hexColor, radix: 16);
     return Color(value).withAlpha(0xFF);}
         catch(e){
           return Colors.white;
         }
+  }
+  Color getCompliableColor(int id) {
+
+    String color="ffffffff";
+    fetchData();
+    print("COLORRR=$colorMap");
+    for (var entry in colorMap.entries) {
+      print('______________________________ $id');
+      if (entry.value.contains(id)) {
+        color =  entry.key;
+      }
+    }
+    print('______________________________');
+    print("COLORRR=$color");
+
+      print("COLOR ==== $color");
+      switch(color)
+          {
+        case "ffff5252":
+          return RED;
+        case "ff00bcd4":
+          return BLUE;
+        case "ff009688":
+          return GREEN;
+        case "ffffab40":
+          return kBarMenu;
+        case "ff7c4dff":
+          return VIOLET;
+        case "ffffffff":
+          return kBarMenu;
+          }
+
+
+      return Colors.black;
+
   }
 
 
@@ -75,6 +126,7 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: kButtonColorSearch,
         title: Text(widget.value),
         actions: isAppBarActionsVisible
             ? [
@@ -98,77 +150,100 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
             },
           ),
         ]
-            : [],
+            : [IconButton(
+          icon: Icon(Icons.add),
+          onPressed: () {
+            _showAddWordWindow(context);
+          },
+        )],
       ),
-      body: ListView.builder(
+      body: Container(
+        color: kCardColor,
+      child:ListView.builder(
         itemCount: words.length,
         itemBuilder: (context, index) {
           bool isSelected = selectedCardIndices.contains(index);
           bool isPinned = pinnedWords.contains(words[index]);
+          Color colorWord;
           print("isPinned= $isPinned");
-
+          print("words[index] = ${words[index]}");
           return Card(
-            color: isSelected
-                ? Colors.grey
-                : (getColorFromString(words[index]['color']) ?? Colors.white),
-            // Set the color from the list or use transparent if not set
+            color: kCardColor,
+            elevation: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.grey.withOpacity(0.3)
+                    : (getColorFromString(words[index]['id_word']) ?? Colors.white).withOpacity(0.3),
+                borderRadius: BorderRadius.circular(10),
 
-            child: ListTile(
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        words[index]['name'] as String,
-                        style: TextStyle(
-                          fontSize: 18.0,
-                          fontWeight: FontWeight.bold,
+              ),
+              padding: EdgeInsets.all(4.0),
+              child: ListTile(
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          words[index]['name'] as String,
+                          style: TextStyle(
+                            fontSize: 18.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (isPinned) Icon(Icons.push_pin, color: Colors.orange),
+                      ],
+                    ),
+
+                    SizedBox(height: 4.0),
+                    Text(
+                      words[index]['spelling_value'].length <= 15
+                          ? words[index]['spelling_value']
+                          : '${words[index]['spelling_value'].substring(0, 15)}...',
+                      style: TextStyle(
+                        color: getCompliableColor(words[index]['id_word']),
+                        fontSize: 14.0,
+                      ),
+                    ),
+                  ],
+                ),
+                trailing: Icon(Icons.arrow_forward_ios, color:getCompliableColor(words[index]['id_word'])),
+                onTap: () {
+                  if (isAppBarActionsVisible) {
+                    _toggleSelection(index);
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WordScreen(
+                          word: _check(index),
                         ),
                       ),
-                      if (isPinned) Icon(Icons.push_pin, color: Colors.orange),
-                    ],
-                  ),
-                  SizedBox(height: 4.0),
-                  Text(
-                    words[index]['spelling_value'].length <= 17
-                        ? words[index]['spelling_value']
-                        : '${words[index]['spelling_value'].substring(
-                        0, 17)}...',
-                    style: TextStyle(
-                      fontSize: 14.0,
-                    ),
-                  ),
-                ],
+                    );
+                  }
+                },
+                onLongPress: () {
+                  setState(() {
+                    isAppBarActionsVisible = !isAppBarActionsVisible;
+                    _toggleSelection(index);
+                  });
+                },
               ),
-              onTap: () {
-                if (isAppBarActionsVisible) {
-                  _toggleSelection(index);
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          WordScreen(
-                            word: _check(index),
-                          ),
-                    ),
-                  );
-                }
-              },
-              onLongPress: () {
-                setState(() {
-                  isAppBarActionsVisible = !isAppBarActionsVisible;
-                  _toggleSelection(index);
-                });
-              },
             ),
           );
         },
+      ),),
+    );
+  }
+  void _showAddWordWindow(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddWordScreen(), // Предполагается, что AddWordScreen - это новый экран, который вы создадите
       ),
     );
   }
-
   Map<String, dynamic> _check(index) {
     print('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF-${words[index]}');
     return words[index];
@@ -264,7 +339,8 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
 
   Future<void> _applyColorToSelectedCards(Color color,int id) async {
     String colorString = color.value.toRadixString(16);
-    await DBHelper.instance.ChangeColor(id, colorString);
+    await DBHelper.instance.ChangeColor(id, colorString, widget.id);
+    fetchData();
     updateList();
 
   }
@@ -275,5 +351,6 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
       _loadWordsFromDatabase();
     });
   }
+
 
 }

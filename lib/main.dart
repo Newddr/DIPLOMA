@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:slovar/utils/constants.dart';
+import 'package:slovar/utils/theme.dart';
 import 'package:windows1251/windows1251.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart';
@@ -15,11 +17,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(MyApp());
 }
+
 void _requestStoragePermission(BuildContext context) async {
   PermissionStatus status = await Permission.storage.status;
   if (!status.isGranted) {
@@ -33,7 +35,8 @@ void _requestStoragePermission(BuildContext context) async {
         builder: (BuildContext context) {
           return AlertDialog(
             title: Text('Важно'),
-            content: Text('Без доступа к файлам, вы не сможете сохранять слова в личный словарь.'),
+            content: Text(
+                'Без доступа к файлам, вы не сможете сохранять слова в личный словарь.'),
             actions: [
               TextButton(
                 child: Text('Понял'),
@@ -50,10 +53,12 @@ void _requestStoragePermission(BuildContext context) async {
     print('Разрешение выдано');
   }
 }
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: appTheme(),
       title: 'My App',
       home: MainPage(),
     );
@@ -70,7 +75,7 @@ class _MainPageState extends State<MainPage> {
   final TextEditingController _searchController = TextEditingController();
   List<String> searchResults = [];
   List<Dictionary> dictionaries = [];
-  List<Dictionary> dictionariesList5=[];
+  List<Dictionary> dictionariesList5 = [];
   List<Map<String, dynamic>> recentSearches = [];
   Map<int, String> countOfWords = {};
 
@@ -80,10 +85,11 @@ class _MainPageState extends State<MainPage> {
     _requestStoragePermission(context);
     _loadDictionaries();
     _loadRecentSearch();
-
   }
+
   Future<List<String>> fetchWordsFromGramota(String query) async {
-    final Uri uri = Uri.parse('https://gramota.ru/poisk?query=$query*&mode=slovari');
+    final Uri uri =
+        Uri.parse('https://gramota.ru/poisk?query=$query*&mode=slovari');
     print("URI= ,$uri");
     final response = await http.get(uri);
     print("response= ,$response");
@@ -105,19 +111,21 @@ class _MainPageState extends State<MainPage> {
       throw Exception('Failed to load words from Gramota');
     }
   }
+
   void _performSearchFromLocal(String query) async {
     if (query.isEmpty) {
       _clearSearch();
       return;
     }
 
-    searchResultsFromDB =
-    await DBHelper.instance.searchWords(query);
+    searchResultsFromDB = await DBHelper.instance.searchWords(query);
     setState(() {
-      searchResults =
-          searchResultsFromDB.map<String>((result) => result['name'] as String).toList();
+      searchResults = searchResultsFromDB
+          .map<String>((result) => result['name'] as String)
+          .toList();
     });
   }
+
   void _performSearch(String query) async {
     if (query.isEmpty) {
       _clearSearch();
@@ -129,22 +137,18 @@ class _MainPageState extends State<MainPage> {
       List<String> words = await fetchWordsFromGramota(query);
       // Обновляем состояние виджета
       setState(() {
-        if(query.length<4 && words.isEmpty)
-          {
+        if (query.length < 4 && words.isEmpty) {
+          words.clear();
+          words.add('Введите еще парочку букв');
+        } else {
+          if (query.length >= 4 && words.isEmpty) {
             words.clear();
-            words.add('Введите еще парочку букв') ;
-          }
-        else{
-          if(query.length>=4 && words.isEmpty){
-            words.clear();
-            words.add('К сожалению ничего не найдено, но мы обязательно это исправим') ;
-
+            words.add(
+                'К сожалению ничего не найдено, но мы обязательно это исправим');
           }
         }
 
-          searchResults = words;
-
-
+        searchResults = words;
       });
     } catch (e) {
       print('Error fetching words: $e');
@@ -152,10 +156,10 @@ class _MainPageState extends State<MainPage> {
       // Можно добавить какую-то логику обработки ошибки
     }
   }
-  Future<void> _loadRecentSearch()
-  async {
+
+  Future<void> _loadRecentSearch() async {
     List<Map<String, dynamic>> recentSearchresult =
-    await DBHelper.instance.getWords();
+        await DBHelper.instance.getWords();
     print('Dics-${recentSearchresult}');
 
     setState(() {
@@ -168,25 +172,27 @@ class _MainPageState extends State<MainPage> {
       recentSearches = recentSearches;
     }
   }
+
   void updateMainPage() {
     setState(() {
       _loadDictionaries();
       _loadRecentSearch();
     });
   }
-  List<Map<String, dynamic>> searchResultsFromDB=[];
+
+  List<Map<String, dynamic>> searchResultsFromDB = [];
 
   Future<void> _loadDictionaries() async {
     List<Map<String, dynamic>> dictionariesFromDB =
-    await DBHelper.instance.getAllDictionaries();
+        await DBHelper.instance.getAllDictionaries();
     print('Dics-${dictionariesFromDB}');
 
     setState(() {
       dictionaries = dictionariesFromDB
           .map((dictionary) => Dictionary(
-        id: dictionary['id'],
-        value: dictionary['name'],
-      ))
+                id: dictionary['id'],
+                value: dictionary['name'],
+              ))
           .toList();
     });
 
@@ -201,10 +207,11 @@ class _MainPageState extends State<MainPage> {
 
       try {
         String count = await getCountofWords(dic.id);
-        countOfWords[dic.id]=count;
+        countOfWords[dic.id] = count;
       } catch (e) {
-        print('Error fetching count of words for dictionary with id=${dic.id}: $e');
-        countOfWords[dic.id]='Ошибка получения количества слов';
+        print(
+            'Error fetching count of words for dictionary with id=${dic.id}: $e');
+        countOfWords[dic.id] = 'Ошибка получения количества слов';
       }
 
       print('dic id=${dic.id}');
@@ -215,7 +222,6 @@ class _MainPageState extends State<MainPage> {
   void _onItemTapped(int index) {
     updateMainPage();
     setState(() {
-
       _selectedIndex = index;
       if (_selectedIndex == 1) {
         _clearSearch();
@@ -255,6 +261,7 @@ class _MainPageState extends State<MainPage> {
     }
     await _loadDictionaries();
   }
+
   Future<bool> hasInternetConnection() async {
     var connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.mobile ||
@@ -267,6 +274,7 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = Theme.of(context).iconTheme.color;
     return WillPopScope(
       onWillPop: () async {
         FocusScope.of(context).unfocus();
@@ -276,6 +284,7 @@ class _MainPageState extends State<MainPage> {
       },
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: kButtonColorSearch,
           toolbarHeight: 0.0,
         ),
         body: Padding(
@@ -296,22 +305,25 @@ class _MainPageState extends State<MainPage> {
                     controller: _searchController,
                     onChanged: (query) {
                       if (_selectedIndex == 1) {
-                        hasInternetConnection()!=false? _performSearch(query): _performSearchFromLocal(query);
+                        hasInternetConnection() != false
+                            ? _performSearch(query)
+                            : _performSearchFromLocal(query);
                       } else if (_selectedIndex == 2) {
                         _performDictionarySearch(query);
                       }
                     },
                     decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.search),
-                      hintText: "Поиск",
-                      contentPadding: EdgeInsets.all(20),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(50),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.blue[50],
-                    ),
+                        prefixIcon: Icon(Icons.search, color: kBarMenu),
+                        hintText: "Поиск",
+                        hintStyle: TextStyle(color: kBarMenu),
+                        contentPadding: EdgeInsets.all(20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(50),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: kButtonColorSearch,
+                        iconColor: kBarMenu),
                   ),
                 ),
               ),
@@ -333,168 +345,316 @@ class _MainPageState extends State<MainPage> {
                       color: Colors.white,
                       child: searchResults.isNotEmpty
                           ? ListView.builder(
-                        itemCount: searchResults.length ,
-                        itemBuilder: (context, index) {
-                          bool isClickable = true;
-                          if (searchResults[index] == "К сожалению ничего не найдено, но мы обязательно это исправим" || searchResults[index] == "Введите еще парочку букв") {
-                            isClickable = false;
-                          }
-                          print("searchResults[index] = ${searchResults[index]}");
-                          return GestureDetector(
-                            onTap: isClickable
-                                ? () {
-                              _onSearchResultTapped(searchResults[index]);
-                            }: null,
-                            child: Card(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              child: ListTile(
-                                title: Text(searchResults[index]),
-                              ),
-                            ),
-                          );
-                        },
-                      )
+                              itemCount: searchResults.length,
+                              itemBuilder: (context, index) {
+                                bool isClickable = true;
+                                if (searchResults[index] ==
+                                        "К сожалению ничего не найдено, но мы обязательно это исправим" ||
+                                    searchResults[index] ==
+                                        "Введите еще парочку букв") {
+                                  isClickable = false;
+                                }
+                                print(
+                                    "searchResults[index] = ${searchResults[index]}");
+                                return GestureDetector(
+                                  onTap: isClickable
+                                      ? () {
+                                          _onSearchResultTapped(
+                                              searchResults[index]);
+                                        }
+                                      : null,
+                                  child: Card(
+                                    color: kCardColor,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      side: BorderSide(color: kButtonColorSearch, width: 2.0),
+                                    ),
+                                    child: ListTile(
+                                      title: Text(searchResults[index]),
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
                           : ListView(
-                        children: <Widget>[
-                          Card(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(20.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text(
-                                    'Последние добавленные слова',
-                                    style: TextStyle(
-                                      fontSize: 18.0,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Wrap(
-                                    spacing: 10.0,
-                                    runSpacing: 10.0,
-                                    children: recentSearches
-                                        .map((search) => GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                WordScreen(
-                                                  word: search,
-                                                ),
-                                          ),
-                                        );
-                                      },
-                                      child: Chip(label: Text(search['name'])),
-                                    ))
-                                        .toList(),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              _onItemTapped(2);
-                            },
-                            child: Card(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.all(20.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text(
-                                      'Словари',
-                                      style: TextStyle(
-                                        fontSize: 18.0,
-                                        fontWeight: FontWeight.bold,
+                              children: <Widget>[
+                                Container(
+                                  padding: EdgeInsets.all(20.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        'Последние добавленные слова',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge,
                                       ),
-                                    ),
-                                    Wrap(
-                                      spacing: 10.0,
-                                      runSpacing: 10.0,
-                                      children: dictionariesList5
-                                          .map(
-                                            (dictionary) => GestureDetector(
-                                              onLongPress: () {
-                                                showDialog(
-                                                  context: context,
-                                                  builder: (BuildContext context) {
-                                                    return AlertDialog(
-                                                      title: Text('Удалить словарь'),
-                                                      content: Text('Вы уверены, что хотите удалить этот словарь?'),
-                                                      actions: <Widget>[
-                                                        TextButton(
-                                                          child: Text('Отмена'),
-                                                          onPressed: () {
-                                                            Navigator.of(context).pop();
-                                                          },
-                                                        ),
-                                                        TextButton(
-                                                          child: Text('Удалить'),
-                                                          onPressed: () {
-                                                            _deleteDictionary(dictionary.id);
-                                                            Navigator.of(context).pop();
-                                                          },
-                                                        ),
-                                                      ],
+                                      Padding(
+                                          padding:
+                                              EdgeInsets.only(bottom: 16.0)),
+                                      Wrap(
+                                        spacing: 10.0,
+                                        runSpacing: 10.0,
+                                        children: recentSearches
+                                            .map((search) => GestureDetector(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            WordScreen(
+                                                                word: search),
+                                                      ),
                                                     );
                                                   },
-                                                );
-                                              },
-                                          onTap: () {
-                                            print(
-                                                'Pressed on chip with ID: ${dictionary.id}');
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    DictionariesScreen(
-                                                      onClosed: () {
-                                                        // Колбэк вызывается при закрытии экрана со словарями
-                                                        setState(() {
-                                                          // Здесь вы можете обновить переменные состояния или выполнить другие действия
-                                                        });
-                                                      },updateMainPage: updateMainPage,
-                                                      id: dictionary.id,
-                                                      value: dictionary.value,
-                                                      dictionaries: '',
+                                                  child: FractionallySizedBox(
+                                                    widthFactor: 0.45,
+                                                    // Задаем ширину как 50% от доступного пространства
+                                                    child: Chip(
+                                                      backgroundColor:
+                                                          kCardColor,
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        side: BorderSide(
+                                                          color: kButtonColorSearch,
+                                                        ),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(
+                                                          10,
+                                                        ),
+                                                      ),
+                                                      label: Padding(
+                                                        padding: EdgeInsets
+                                                            .symmetric(
+                                                                vertical: 5.0),
+                                                        child: Row(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .center,
+                                                          children: <Widget>[
+                                                            Icon(
+                                                              Icons.add_circle_outline,
+                                                              color: Colors.grey[500],
+                                                              size: 28, // Увеличиваем размер иконки
+                                                            ),
+                                                            SizedBox(width: 15),
+                                                            // Добавляем небольшой отступ между иконкой и текстом
+                                                            Expanded(
+                                                            child:Text(
+                                                              search['name'],
+                                                              style: TextStyle(fontSize: 18),
+                                                              overflow: TextOverflow.ellipsis,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
                                                     ),
-                                              ),
-                                            );
-                                            updateMainPage();
-                                          },
-                                          child: Chip(
-                                            label: Text(dictionary.value),
-                                          ),
-                                        ),
-                                      )
-                                          .toList(),
-                                    ),
-                                  ],
+                                                  ),
+                                                ))
+                                            .toList(),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
+                                GestureDetector(
+                                  onTap: () {
+                                    _onItemTapped(2);
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.all(20.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Text(
+                                          'Cловари',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleLarge,
+                                        ),
+                                        Padding(
+                                            padding:
+                                                EdgeInsets.only(bottom: 16.0)),
+                                        Wrap(
+                                          spacing: 10.0,
+                                          runSpacing: 10.0,
+                                          children: dictionariesList5
+                                              .map(
+                                                (dictionary) => GestureDetector(
+                                                  onLongPress: () {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (BuildContextcontext) {
+                                                        return AlertDialog(
+                                                          title: Text('Удалить словарь'),
+                                                          content: Text('Вы уверены, что хотите удалить этот словарь?'),
+                                                          actions: <Widget>[
+                                                            TextButton(
+                                                              child: Text('Отмена'),
+                                                              onPressed: () {
+                                                                Navigator.of(context).pop();
+                                                              },
+                                                            ),
+                                                            TextButton(
+                                                              child: Text('Удалить'),
+                                                              onPressed: () {
+                                                                _deleteDictionary(dictionary.id);
+                                                                Navigator.of(context).pop();
+                                                              },
+                                                            ),
+                                                          ],
+                                                        );
+                                                      },
+                                                    );
+                                                  },
+                                                  onTap: () {
+                                                    print('Pressed on chip with ID: ${dictionary.id}');
+                                                    Navigator.push(context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            DictionariesScreen(
+                                                          onClosed: () {
+                                                            setState(() {});
+                                                          },
+                                                          updateMainPage:
+                                                              updateMainPage,
+                                                          id: dictionary.id,
+                                                          value:
+                                                              dictionary.value,
+                                                          dictionaries: '',
+                                                        ),
+                                                      ),
+                                                    );
+                                                    updateMainPage();
+                                                  },
+                                                  child: LayoutBuilder(
+                                                    builder:
+                                                        (context, constraints) {
+                                                      // Проверяем, вмещается ли текст в начальную ширину
+                                                      TextPainter textPainter =
+                                                          TextPainter(
+                                                        text: TextSpan(
+                                                          text:
+                                                              dictionary.value,
+                                                          style: TextStyle(
+                                                              fontSize: 18),
+                                                        ),
+                                                        maxLines: 1,
+                                                        textDirection:TextDirection.ltr,)..layout(maxWidth: constraints.maxWidth *0.45);
+
+                                                      bool fitsInInitialWidth =!textPainter.didExceedMaxLines;
+
+                                                      if (!fitsInInitialWidth) {
+                                                        textPainter.layout(maxWidth: constraints.maxWidth *0.9);
+                                                        bool
+                                                            fitsInIncreasedWidth =!textPainter.didExceedMaxLines;
+
+                                                        return FractionallySizedBox(
+                                                          widthFactor:
+                                                              fitsInIncreasedWidth? 0.9: 0.45,
+                                                          child: Chip(
+                                                            backgroundColor:
+                                                                kCardColor,
+                                                            shape:
+                                                                RoundedRectangleBorder(
+                                                              side: BorderSide(color: kButtonColorSearch),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(10),
+                                                            ),
+                                                            label: Padding(
+                                                              padding: EdgeInsets
+                                                                  .symmetric(vertical:5.0),
+                                                              child: Row(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment.center,
+                                                                children: <Widget>[
+                                                                  Icon(
+                                                                    Icons.bookmark_border,
+                                                                    color: Colors.grey[500],
+                                                                    size: 28,
+                                                                  ),
+                                                                  SizedBox(width:15),
+                                                                  Expanded(
+                                                                    child: Text(
+                                                                      dictionary.value,
+                                                                      style:
+                                                                          TextStyle(fontSize:18,),
+                                                                      overflow:
+                                                                          TextOverflow.ellipsis,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      } else {
+                                                        return FractionallySizedBox(
+                                                          widthFactor: 0.45,
+                                                          child: Chip(
+                                                            backgroundColor:
+                                                                kCardColor,
+                                                            shape:
+                                                                RoundedRectangleBorder(
+                                                              side: BorderSide(
+                                                                  color: kButtonColorSearch),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(10),
+                                                            ),
+                                                            label: Padding(
+                                                              padding: EdgeInsets.symmetric(vertical: 5.0),
+                                                              child: Row(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment.center,
+                                                                children: <Widget>[
+                                                                  Icon(
+                                                                    Icons.bookmark_border,
+                                                                    color: Colors.grey[500],
+                                                                    size: 28,
+                                                                  ),
+                                                                  SizedBox(width:15),
+                                                                  Expanded(
+                                                                    child: Text(
+                                                                      dictionary.value,
+                                                                      style:
+                                                                          TextStyle(fontSize:18,),
+                                                                      overflow:
+                                                                          TextOverflow.ellipsis,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
+                                                    },
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                     ), //Главная
                     Container(
                       color: Colors.white,
                       child: ListView.builder(
                         itemCount: searchResults.length,
                         itemBuilder: (context, index) {
-                          // Найдите словарь, соответствующий текущему результату поиска
-                          Dictionary currentDictionary = dictionaries.firstWhere(
-                                (dictionary) => dictionary.value == searchResults[index],
+// Найдите словарь, соответствующий текущему результату поиска
+                          Dictionary currentDictionary =
+                              dictionaries.firstWhere(
+                            (dictionary) =>
+                                dictionary.value == searchResults[index],
                             orElse: () => new Dictionary(id: 0, value: 'value'),
                           );
 
@@ -506,7 +666,8 @@ class _MainPageState extends State<MainPage> {
                                   builder: (BuildContext context) {
                                     return AlertDialog(
                                       title: Text('Удалить словарь'),
-                                      content: Text('Вы уверены, что хотите удалить этот словарь?'),
+                                      content: Text(
+                                          'Вы уверены, что хотите удалить этот словарь?'),
                                       actions: <Widget>[
                                         TextButton(
                                           child: Text('Отмена'),
@@ -517,7 +678,8 @@ class _MainPageState extends State<MainPage> {
                                         TextButton(
                                           child: Text('Удалить'),
                                           onPressed: () {
-                                            _deleteDictionary(currentDictionary.id);
+                                            _deleteDictionary(
+                                                currentDictionary.id);
                                             Navigator.of(context).pop();
                                           },
                                         ),
@@ -526,85 +688,95 @@ class _MainPageState extends State<MainPage> {
                                   },
                                 );
                               },
-
-                              onTap:() {
-                                print('Pressed on chip with ID: ${currentDictionary.id}');
+                              onTap: () {
+                                print(
+                                    'Pressed on card with ID: ${currentDictionary.id}');
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => DictionariesScreen(
                                       onClosed: () {
-                                        // Колбэк вызывается при закрытии экрана со словарями
-                                        setState(() {
-                                          // Здесь вы можете обновить переменные состояния или выполнить другие действия
-                                        });
-                                      },updateMainPage: updateMainPage,
+                                        setState(() {});
+                                      },
+                                      updateMainPage: updateMainPage,
                                       id: currentDictionary.id,
                                       value: currentDictionary.value,
                                       dictionaries: '',
                                     ),
                                   ),
-                                );      updateMainPage();
+                                );
+                                updateMainPage();
                               },
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50),
+                              child: Container(
+                                padding: EdgeInsets.all(10.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Padding(
-                                      padding: EdgeInsets.only(
-                                        left: 10,
-                                        right: 10,
-                                        bottom: 5,
-                                        top: 5,
-                                      ),
-                                      child: CircleAvatar(
-                                        radius: 30,
-                                        child: Align(
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            currentDictionary.value[0].toUpperCase(),
-                                            style: TextStyle(
-                                              fontSize: 20,
+                                      padding:
+                                          const EdgeInsets.only(left: 20.0),
+                                      child: Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              currentDictionary.value,
+                                              style: TextStyle(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
+                                            Text(
+                                              "Cлов в словаре: " +
+                                                  countOfWords[
+                                                      currentDictionary.id]!,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: kBarMenu,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: Colors.transparent,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                            color: kButtonColorSearch),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          currentDictionary.value[0]
+                                              .toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            color: kBarMenu,
                                           ),
                                         ),
                                       ),
                                     ),
-                                    Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        Text(
-                                          currentDictionary.value,
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                          ),
-                                        ),
-                                        Text(
-                                            countOfWords[currentDictionary.id]!,
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.black.withOpacity(0.8),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Spacer(),
-                                    Icon(Icons.arrow_forward_ios),
                                   ],
                                 ),
                               ),
                             );
                           } else {
-                            // Обработка ситуации, когда словарь не найден
+// Обработка ситуации, когда словарь не найден
                             return SizedBox.shrink();
                           }
                         },
                       ),
-                    ),  //Словари
+                    ),
+//Словари
                   ],
                 ),
               ),
@@ -612,6 +784,7 @@ class _MainPageState extends State<MainPage> {
           ),
         ),
         bottomNavigationBar: BottomNavigationBar(
+          backgroundColor: kButtonColorSearch,
           items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),
@@ -628,17 +801,21 @@ class _MainPageState extends State<MainPage> {
           ],
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
+          selectedItemColor: kBarMenu,
+          // Установка цвета выбранных элементов
+          unselectedItemColor: Colors.grey,
         ),
       ),
     );
   }
 
   Future<List<String>?> _onSearchResultTapped(String word) async {
-    // Проверяем, есть ли слово в локальной базе данных
-    Map<String, dynamic>? wordInfo = (await DBHelper.instance.getWordInfo(word)) as Map<String, dynamic>?;
-print("Нашли ? = $wordInfo");
+// Проверяем, есть ли слово в локальной базе данных
+    Map<String, dynamic>? wordInfo =
+        (await DBHelper.instance.getWordInfo(word)) as Map<String, dynamic>?;
+    print("Нашли ? = $wordInfo");
     if (wordInfo != null) {
-      // Если слово найдено в базе данных, выводим информацию из базы данных в карточку
+// Если слово найдено в базе данных, выводим информацию из базы данных в карточку
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -647,34 +824,47 @@ print("Нашли ? = $wordInfo");
       );
     } else {
       print('Пока что пусто, но будет парсер!');
-      final response = await http.get(Uri.parse('http://classic.gramota.ru/slovari/dic/?word=$word&all=x'));
+      final response = await http.get(
+          Uri.parse('http://classic.gramota.ru/slovari/dic/?word=$word&all=x'));
       print('responce= ${response.statusCode}');
       if (response.statusCode == 200) {
-        // Декодируем тело ответа в кодировке windows-1251
+// Декодируем тело ответа в кодировке windows-1251
         final decodedBody = windows1251.decode(response.bodyBytes);
         final document = parse(decodedBody);
 
-        final definitionsBlocks = document.querySelectorAll('div[style="padding-left:50px"]');
-        final definitionsList = definitionsBlocks.map((block) {
-          // Инициализируем текст определения
-          String definitionsText = block.text;
+        final definitionsBlocks =
+            document.querySelectorAll('div[style="padding-left:50px"]');
 
-          // Находим все теги <span class="accent"> внутри тега <b>
-          final accentTags = block.querySelectorAll('b > span.accent');
-          for (final accentTag in accentTags) {
-            // Заменяем текст внутри тега <span class="accent"> на текст с ударением
-            definitionsText = definitionsText.replaceFirst(accentTag.text,  "'"+accentTag.text);
-          }
+        final definitionsList = definitionsBlocks.map((block) {
+// Инициализируем текст определения
+          String definitionsText = block.outerHtml;
+          print("________________");
+          print(definitionsText);
+
+// Заменяем теги <span class="accent"> на апостроф, а остальные теги <span> удаляем
+          definitionsText = definitionsText.replaceAllMapped(
+            RegExp(r'<span class="accent">([^<]+)</span>'),
+            (match) => "'${match.group(1)}",
+          );
+          definitionsText =
+              definitionsText.replaceAll(RegExp(r'<span[^>]*>'), '');
+          definitionsText = definitionsText.replaceAll(RegExp(r'</span>'), '');
+
+// Преобразуем HTML в текст
+          definitionsText = parse(definitionsText).body!.text;
+          print(definitionsText);
+          print("________________");
+// Находим все теги <span class="accent"> внутри тега <b>
 
           return definitionsText;
         }).toList();
 
         final createdAt = DateTime.now().toIso8601String();
-        var id=await DBHelper.instance.getLastId();
+        var id = await DBHelper.instance.getLastId();
         print(id);
         id ??= 0;
         final Map<String, dynamic> valuesToInsert = {
-          'id_word': (id!+1),
+          'id_word': (id! + 1),
           'name': word,
           'created_at': createdAt,
           'is_pinned': 0,
@@ -690,8 +880,8 @@ print("Нашли ? = $wordInfo");
           'translate_value': definitionsList[8]
         };
 
-        await DBHelper.instance.addTempWord(valuesToInsert,0);
-        // Преобразуем список определений в Map<String, dynamic>
+        await DBHelper.instance.addTempWord(valuesToInsert, 0);
+// Преобразуем список определений в Map<String, dynamic>
         final definitionsMap = {'$word': definitionsList};
         print('valuesToInsert= $valuesToInsert');
 
@@ -703,29 +893,24 @@ print("Нашли ? = $wordInfo");
         );
         print('definitionsMap: $definitionsMap');
       } else {
-        print('Ошибка: Не удалось получить доступ к странице для слова "$word"');
+        print(
+            'Ошибка: Не удалось получить доступ к странице для слова "$word"');
       }
-
-
-
-
-
     }
-
   }
 
   Future<void> _deleteDictionary(int id) async {
     await DBHelper.instance.DeleteDictionary(id);
 
-    // После удаления словаря, загрузите обновленный список словарей
+// После удаления словаря, загрузите обновленный список словарей
     await _loadDictionaries();
 
-    // Очистите результаты поиска, чтобы отобразить обновленный список
+// Очистите результаты поиска, чтобы отобразить обновленный список
     _performDictionarySearch('');
 
-    // Вызовите setState для перерисовки виджета
+// Вызовите setState для перерисовки виджета
     setState(() {
-      // Проверьте, если у вас есть результаты поиска, замените значения в searchResults
+// Проверьте, если у вас есть результаты поиска, замените значения в searchResults
       if (searchResults.isNotEmpty) {
         searchResults = dictionaries
             .map((dictionary) => dictionary.value)
@@ -734,12 +919,10 @@ print("Нашли ? = $wordInfo");
       }
     });
   }
+
   Future<String> getCountofWords(int id) async {
-    var a =await DBHelper.instance.getWordsQuery(id);
-    var lastDigit = a.length % 10;
-if  (lastDigit>=5)return '${a.length} слов';
-else if(lastDigit==1)return '${a.length} слово';
-    return '${a.length} слова';
+    var a = await DBHelper.instance.getWordsQuery(id);
+    return '${a.length}';
   }
 }
 
@@ -748,7 +931,8 @@ class BeautifulSoup {
 
   BeautifulSoup(this.data);
 
-  Iterable<HtmlTag> find_all(String name, {required Map<String, String> attrs}) sync* {
+  Iterable<HtmlTag> find_all(String name,
+      {required Map<String, String> attrs}) sync* {
     var regExp = RegExp('<$name.*?>(.*?)</$name>', dotAll: true);
     var matches = regExp.allMatches(data);
     for (var match in matches) {
@@ -759,6 +943,7 @@ class BeautifulSoup {
     }
   }
 }
+
 class HtmlTag {
   final String data;
 
@@ -795,13 +980,10 @@ class HtmlTag {
     var regExp = RegExp(r'>([^<>]*)</');
     var match = regExp.firstMatch(data);
     if (match != null) {
-      return [HtmlTag(match.group(1)!)]; // Используйте !, чтобы убедиться, что строка не null
+      return [
+        HtmlTag(match.group(1)!)
+      ]; // Используйте !, чтобы убедиться, что строка не null
     }
     return [];
   }
 }
-
-
-
-
-
