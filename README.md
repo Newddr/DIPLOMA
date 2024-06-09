@@ -1,5 +1,7 @@
 # In-depth-dictionary-of-Russian-language-
-Кроссплатформенное мобильное приложение для изучения языка
+
+Кроссплатформенное мобильное приложение для изучения языка 
+
 Приложение позволит вам:
 1. Выполнять поиск интересующих слов в интеренете с предоставлением информации о нем из разных официально подтвержденных словарей. Вся предоставляемая информация достоверна.
 2. Сохранять слова в свои личные словари, доступ к которым будет возможем без сети интернет.
@@ -30,7 +32,9 @@
 
 
 # In-depth-dictionary-of-Russian-language-
+
 Cross-platform mobile language learning app
+
 The application will allow you to:
 1. Search for interesting words on the Internet with the provision of information about it from various officially confirmed dictionaries. All information provided is reliable.
 2. Save words to your personal dictionaries, which can be accessed without the Internet.
