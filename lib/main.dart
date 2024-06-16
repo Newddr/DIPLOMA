@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:slovar/utils/constants.dart';
 import 'package:slovar/utils/theme.dart';
 import 'package:windows1251/windows1251.dart';
@@ -45,6 +47,8 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 1;
+  String userAgreement = '';
+
   final TextEditingController _searchController = TextEditingController();
   List<String> searchResults = [];
   List<Dictionary> dictionaries = [];
@@ -55,10 +59,64 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
+    _loadUserAgreement();
+    _checkFirstLaunch();
     hasInternetConnection();
     _loadDictionaries();
     _loadRecentSearch();
+    
   }
+  Future<void> _checkFirstLaunch() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isAgreed = prefs.getBool('isAgreed') ?? false;
+
+    if (!isAgreed) {
+      _showAgreementDialog();
+    }
+  }
+
+  void _showAgreementDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Пользовательское Соглашение'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                Text(userAgreement),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text('Не согласен'),
+              onPressed: () {
+                SystemNavigator.pop();
+              },
+            ),
+            TextButton(
+              child: Text('Согласен'),
+              onPressed: () async {
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('isAgreed', true);
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _loadUserAgreement() async {
+    final agreement = await rootBundle.loadString('assets/user_agreement.txt');
+    setState(() {
+      userAgreement = agreement;
+    });
+  }
+
 
   Future<List<String>> fetchWordsFromGramota(String query) async {
     final Uri uri =
@@ -310,12 +368,28 @@ class _MainPageState extends State<MainPage> {
                 child: IndexedStack(
                   index: _selectedIndex,
                   children: [
-                    Container(
-                      color: Colors.white,
-                      child: Center(
-                        child: Text('Настройки'),
-                      ),
-                    ), //Настройки
+                  Container(
+                  color: Colors.white,
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: ExpansionTile(
+                              title: Text('Пользовательское Соглашение'),
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(userAgreement),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ), //Настройки
                     Container(
                       color: Colors.white,
                       child: searchResults.isNotEmpty
@@ -888,7 +962,10 @@ class _MainPageState extends State<MainPage> {
     var a = await DBHelper.instance.getWordsQuery(id);
     return '${a.length}';
   }
+
 }
+
+
 
 class BeautifulSoup {
   final String data;
