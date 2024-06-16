@@ -8,7 +8,6 @@ import 'DB/DBHelper.dart';
 import 'Word_screen.dart';
 import 'dictionary_class.dart';
 import 'dictionary_screen.dart';
-import 'words.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as parser;
 import 'package:html/dom.dart' as dom;
@@ -16,50 +15,24 @@ import 'package:connectivity/connectivity.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:slovar/utils/globals.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  isDartTheme=false;
+  setupColors();
   runApp(MyApp());
+
 }
 
-void _requestStoragePermission(BuildContext context) async {
-  PermissionStatus status = await Permission.storage.status;
-  if (!status.isGranted) {
-    PermissionStatus result = await Permission.storage.request();
-    if (result.isGranted) {
-      print('Разрешение выдано');
-    } else {
-      print('Разрешение не выдано');
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Важно'),
-            content: Text(
-                'Без доступа к файлам, вы не сможете сохранять слова в личный словарь.'),
-            actions: [
-              TextButton(
-                child: Text('Понял'),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Закрыть диалоговое окно
-                },
-              ),
-            ],
-          );
-        },
-      );
-    }
-  } else {
-    print('Разрешение выдано');
-  }
-}
+
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: appTheme(),
-      title: 'My App',
+      title: 'Углубленный словарь',
       home: MainPage(),
     );
   }
@@ -82,7 +55,7 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-    _requestStoragePermission(context);
+    hasInternetConnection();
     _loadDictionaries();
     _loadRecentSearch();
   }
@@ -90,9 +63,7 @@ class _MainPageState extends State<MainPage> {
   Future<List<String>> fetchWordsFromGramota(String query) async {
     final Uri uri =
         Uri.parse('https://gramota.ru/poisk?query=$query*&mode=slovari');
-    print("URI= ,$uri");
     final response = await http.get(uri);
-    print("response= ,$response");
 
     if (response.statusCode == 200) {
       // Парсинг HTML
@@ -104,7 +75,6 @@ class _MainPageState extends State<MainPage> {
       for (int i = 0; i < items.length && i < 5; i++) {
         words.add(items[i].text);
       }
-      print("words= ,$words");
       // Возвращаем список слов и вызываем setState
       return words;
     } else {
@@ -151,7 +121,6 @@ class _MainPageState extends State<MainPage> {
         searchResults = words;
       });
     } catch (e) {
-      print('Error fetching words: $e');
       // Обработка ошибки, если запрос не удался
       // Можно добавить какую-то логику обработки ошибки
     }
@@ -160,14 +129,12 @@ class _MainPageState extends State<MainPage> {
   Future<void> _loadRecentSearch() async {
     List<Map<String, dynamic>> recentSearchresult =
         await DBHelper.instance.getWords();
-    print('Dics-${recentSearchresult}');
 
     setState(() {
       recentSearches = recentSearchresult;
     });
-    if (recentSearches.length > 10) {
-      // Получите последние 5 словарей с конца
-      recentSearches = recentSearches.reversed.toList().sublist(0, 10);
+    if (recentSearches.length > 6) {
+      recentSearches = recentSearches.reversed.toList().sublist(0, 6);
     } else {
       recentSearches = recentSearches;
     }
@@ -185,7 +152,6 @@ class _MainPageState extends State<MainPage> {
   Future<void> _loadDictionaries() async {
     List<Map<String, dynamic>> dictionariesFromDB =
         await DBHelper.instance.getAllDictionaries();
-    print('Dics-${dictionariesFromDB}');
 
     setState(() {
       dictionaries = dictionariesFromDB
@@ -203,20 +169,15 @@ class _MainPageState extends State<MainPage> {
       dictionariesList5 = dictionaries;
     }
     for (var dic in dictionaries) {
-      print('dic1 id=${dic.id}');
 
       try {
         String count = await getCountofWords(dic.id);
         countOfWords[dic.id] = count;
       } catch (e) {
-        print(
-            'Error fetching count of words for dictionary with id=${dic.id}: $e');
         countOfWords[dic.id] = 'Ошибка получения количества слов';
       }
 
-      print('dic id=${dic.id}');
     }
-    print(countOfWords);
   }
 
   void _onItemTapped(int index) {
@@ -245,7 +206,6 @@ class _MainPageState extends State<MainPage> {
         searchResults = dictionaries.map((d) => d.value).toList();
       });
     } else {
-      print("QQ-${query}");
       // Выполните поиск по словарям в базе данных и фильтруйте результаты
       List<String> matchingDictionaries = [];
 
@@ -254,7 +214,6 @@ class _MainPageState extends State<MainPage> {
           matchingDictionaries.add(dictionary.value);
         }
       }
-      print("MD-${matchingDictionaries}");
       setState(() {
         searchResults = matchingDictionaries;
       });
@@ -268,6 +227,24 @@ class _MainPageState extends State<MainPage> {
         connectivityResult == ConnectivityResult.wifi) {
       return true;
     } else {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Важно'),
+            content: Text(
+                'Без доступа к интернету, вы не сможете искать слова в интернете'),
+            actions: [
+              TextButton(
+                child: Text('Понял'),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Закрыть диалоговое окно
+                },
+              ),
+            ],
+          );
+        },
+      );
       return false;
     }
   }
@@ -283,6 +260,7 @@ class _MainPageState extends State<MainPage> {
         return false;
       },
       child: Scaffold(
+        backgroundColor: kCardColor,
         appBar: AppBar(
           backgroundColor: kButtonColorSearch,
           toolbarHeight: 0.0,
@@ -294,11 +272,8 @@ class _MainPageState extends State<MainPage> {
             fit: StackFit.expand,
             children: [
               Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(50),
-                ),
+                color: kCardColor,
                 elevation: 0.0,
-                color: Colors.transparent,
                 child: Padding(
                   padding: EdgeInsets.all(10.0),
                   child: TextField(
@@ -314,7 +289,7 @@ class _MainPageState extends State<MainPage> {
                     },
                     decoration: InputDecoration(
                         prefixIcon: Icon(Icons.search, color: kBarMenu),
-                        hintText: "Поиск",
+                        hintText:_selectedIndex==1? "Поиск слов":"Поиск словаря",
                         hintStyle: TextStyle(color: kBarMenu),
                         contentPadding: EdgeInsets.all(20),
                         border: OutlineInputBorder(
@@ -354,8 +329,6 @@ class _MainPageState extends State<MainPage> {
                                         "Введите еще парочку букв") {
                                   isClickable = false;
                                 }
-                                print(
-                                    "searchResults[index] = ${searchResults[index]}");
                                 return GestureDetector(
                                   onTap: isClickable
                                       ? () {
@@ -380,6 +353,7 @@ class _MainPageState extends State<MainPage> {
                           : ListView(
                               children: <Widget>[
                                 Container(
+                                  color: kCardColor,
                                   padding: EdgeInsets.all(20.0),
                                   child: Column(
                                     crossAxisAlignment:
@@ -393,8 +367,10 @@ class _MainPageState extends State<MainPage> {
                                       ),
                                       Padding(
                                           padding:
-                                              EdgeInsets.only(bottom: 16.0)),
-                                      Wrap(
+                                              EdgeInsets.only(bottom: 16.0)
+                                      ),
+
+                                      recentSearches.isNotEmpty?Wrap(
                                         spacing: 10.0,
                                         runSpacing: 10.0,
                                         children: recentSearches
@@ -445,7 +421,7 @@ class _MainPageState extends State<MainPage> {
                                                             Expanded(
                                                             child:Text(
                                                               search['name'],
-                                                              style: TextStyle(fontSize: 18),
+                                                              style: TextStyle(fontSize: 18, color: kPrimaryColor),
                                                               overflow: TextOverflow.ellipsis,
                                                               ),
                                                             ),
@@ -456,6 +432,11 @@ class _MainPageState extends State<MainPage> {
                                                   ),
                                                 ))
                                             .toList(),
+                                      ):Center(
+                                        child: Text(
+                                          'Вы еще не добавили ни одного слова',
+                                          style: TextStyle(fontSize: 20, color: Colors.grey),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -465,6 +446,7 @@ class _MainPageState extends State<MainPage> {
                                     _onItemTapped(2);
                                   },
                                   child: Container(
+                                    color: kCardColor,
                                     padding: EdgeInsets.all(20.0),
                                     child: Column(
                                       crossAxisAlignment:
@@ -512,7 +494,6 @@ class _MainPageState extends State<MainPage> {
                                                     );
                                                   },
                                                   onTap: () {
-                                                    print('Pressed on chip with ID: ${dictionary.id}');
                                                     Navigator.push(context,
                                                       MaterialPageRoute(
                                                         builder: (context) =>
@@ -541,7 +522,7 @@ class _MainPageState extends State<MainPage> {
                                                           text:
                                                               dictionary.value,
                                                           style: TextStyle(
-                                                              fontSize: 18),
+                                                              fontSize: 18,color: kPrimaryColor),
                                                         ),
                                                         maxLines: 1,
                                                         textDirection:TextDirection.ltr,)..layout(maxWidth: constraints.maxWidth *0.45);
@@ -582,7 +563,7 @@ class _MainPageState extends State<MainPage> {
                                                                     child: Text(
                                                                       dictionary.value,
                                                                       style:
-                                                                          TextStyle(fontSize:18,),
+                                                                          TextStyle(fontSize:18,color: kPrimaryColor),
                                                                       overflow:
                                                                           TextOverflow.ellipsis,
                                                                     ),
@@ -621,7 +602,7 @@ class _MainPageState extends State<MainPage> {
                                                                     child: Text(
                                                                       dictionary.value,
                                                                       style:
-                                                                          TextStyle(fontSize:18,),
+                                                                          TextStyle(fontSize:18,color: kPrimaryColor),
                                                                       overflow:
                                                                           TextOverflow.ellipsis,
                                                                     ),
@@ -646,7 +627,7 @@ class _MainPageState extends State<MainPage> {
                             ),
                     ), //Главная
                     Container(
-                      color: Colors.white,
+                      color: kCardColor,
                       child: ListView.builder(
                         itemCount: searchResults.length,
                         itemBuilder: (context, index) {
@@ -689,9 +670,7 @@ class _MainPageState extends State<MainPage> {
                                 );
                               },
                               onTap: () {
-                                print(
-                                    'Pressed on card with ID: ${currentDictionary.id}');
-                                Navigator.push(
+                               Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => DictionariesScreen(
@@ -710,7 +689,7 @@ class _MainPageState extends State<MainPage> {
                               child: Container(
                                 padding: EdgeInsets.all(10.0),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: kCardColor,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Row(
@@ -729,7 +708,8 @@ class _MainPageState extends State<MainPage> {
                                               currentDictionary.value,
                                               style: TextStyle(
                                                 fontSize: 24,
-                                                fontWeight: FontWeight.bold,
+
+                                                color: kPrimaryColor
                                               ),
                                             ),
                                             Text(
@@ -813,8 +793,8 @@ class _MainPageState extends State<MainPage> {
 // Проверяем, есть ли слово в локальной базе данных
     Map<String, dynamic>? wordInfo =
         (await DBHelper.instance.getWordInfo(word)) as Map<String, dynamic>?;
-    print("Нашли ? = $wordInfo");
     if (wordInfo != null) {
+// Если слово найдено в базе данных, выводим информацию из базы данных в карточку
 // Если слово найдено в базе данных, выводим информацию из базы данных в карточку
       Navigator.push(
         context,
@@ -823,10 +803,8 @@ class _MainPageState extends State<MainPage> {
         ),
       );
     } else {
-      print('Пока что пусто, но будет парсер!');
       final response = await http.get(
           Uri.parse('http://classic.gramota.ru/slovari/dic/?word=$word&all=x'));
-      print('responce= ${response.statusCode}');
       if (response.statusCode == 200) {
 // Декодируем тело ответа в кодировке windows-1251
         final decodedBody = windows1251.decode(response.bodyBytes);
@@ -838,8 +816,6 @@ class _MainPageState extends State<MainPage> {
         final definitionsList = definitionsBlocks.map((block) {
 // Инициализируем текст определения
           String definitionsText = block.outerHtml;
-          print("________________");
-          print(definitionsText);
 
 // Заменяем теги <span class="accent"> на апостроф, а остальные теги <span> удаляем
           definitionsText = definitionsText.replaceAllMapped(
@@ -852,16 +828,11 @@ class _MainPageState extends State<MainPage> {
 
 // Преобразуем HTML в текст
           definitionsText = parse(definitionsText).body!.text;
-          print(definitionsText);
-          print("________________");
-// Находим все теги <span class="accent"> внутри тега <b>
-
           return definitionsText;
         }).toList();
 
         final createdAt = DateTime.now().toIso8601String();
         var id = await DBHelper.instance.getLastId();
-        print(id);
         id ??= 0;
         final Map<String, dynamic> valuesToInsert = {
           'id_word': (id! + 1),
@@ -883,7 +854,6 @@ class _MainPageState extends State<MainPage> {
         await DBHelper.instance.addTempWord(valuesToInsert, 0);
 // Преобразуем список определений в Map<String, dynamic>
         final definitionsMap = {'$word': definitionsList};
-        print('valuesToInsert= $valuesToInsert');
 
         Navigator.push(
           context,
@@ -891,11 +861,8 @@ class _MainPageState extends State<MainPage> {
             builder: (context) => WordScreen(word: valuesToInsert),
           ),
         );
-        print('definitionsMap: $definitionsMap');
       } else {
-        print(
-            'Ошибка: Не удалось получить доступ к странице для слова "$word"');
-      }
+        }
     }
   }
 

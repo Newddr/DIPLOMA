@@ -39,7 +39,6 @@ class _WordScreenState extends State<WordScreen> {
   Future<void> _loadDictionaries() async {
     dictionariesFromDB =
     await DBHelper.instance.getAllDictionaries();
-    print('Dics-${dictionariesFromDB}');
 
     setState(() {
       dictionaryesLocal = dictionariesFromDB
@@ -51,9 +50,7 @@ class _WordScreenState extends State<WordScreen> {
   }
 
   Future<void> _loadInfoFromBD() async {
-    print('ID-${widget.word['id_word']}');
     var indexesFromDB = (await DBHelper.instance.getAllDictionariesContainWord(widget.word['id_word']));
-    print('Indexes: ${indexesFromDB}');
     setState(() {
       dictionariesID = indexesFromDB
           .map((map) => map['id'] as int)
@@ -63,7 +60,6 @@ class _WordScreenState extends State<WordScreen> {
       String definition = _getValue(type);
       definitions.add(definition);
     });
-    print('34234234-${dictionariesID}');
   }
 
   @override
@@ -148,7 +144,6 @@ class _WordScreenState extends State<WordScreen> {
     return spans;
   }
   Future<void> _showEditDefinitionModal(dictionaryType) async {
-    print('dictionaryType= $dictionaryType');
     final TextEditingController _textController = TextEditingController(text: _getValue(dictionaryType) ); // добавлен предустановленный текст
 
     return showDialog<void>(
@@ -295,7 +290,6 @@ class _WordScreenState extends State<WordScreen> {
     var id_word =word.word['id_word'];
     await DBHelper.instance.addToDictionary(id, id_word);
     await DBHelper.instance.addTempWord(word.word,1);
-    print("ff- $id_word");
     setState(() {
       dictionariesID.add(id);
     });
@@ -363,13 +357,11 @@ class _WordScreenState extends State<WordScreen> {
 
     });
 
-    print("ff- $name");
 
   }
 
 
   bool _changeStateWord(int dictionaryId) {
-    print('1------${dictionariesID} ---- 2 -----${dictionaryId}');
     return dictionariesID.contains(dictionaryId);
   }
 }

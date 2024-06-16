@@ -10,7 +10,7 @@ ThemeData appTheme() => ThemeData(
   primaryColor: kPrimaryColor,
   textTheme: TextTheme(
     titleLarge: TextStyle(
-      color: Colors.black
+      color: kPrimaryColor
     ),
   ),
   buttonTheme: ButtonThemeData(

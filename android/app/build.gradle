@@ -68,9 +68,15 @@ android {
 flutter {
     source '../..'
 }
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
 kotlin {
     jvmToolchain {
-        languageVersion = JavaLanguageVersion.of(11)
+        languageVersion.set(JavaLanguageVersion.of(11))
     }
 }
 

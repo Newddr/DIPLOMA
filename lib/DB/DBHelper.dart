@@ -72,23 +72,8 @@ class DBHelper {
   }
 
   // Method to delete a word from the "InfoAboutWord" table by ID
-  Future<void> deleteWordById(int id) async {
-    final db = await instance.database;
-    await db.delete('InfoAboutWord', where: 'id_word = ?', whereArgs: [id]);
-  }
 
-  Future<void> insertDictionary(Map<String, dynamic> dictionaryData) async {
-    final db = await instance.database;
-    await db.insert('Dictionaryes', dictionaryData, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-  Future<void> insertLink(Map<String, dynamic> linkData) async {
-    final db = await instance.database;
-    await db.insert('DictionaryesWords', linkData, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-  Future<void> insertWord(Map<String, dynamic> wordData) async {
-    final db = await instance.database;
-    await db.insert('InfoAboutWord', wordData, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
+
 
 
   Future<List<Map<String, dynamic>>> getWords() async {
@@ -97,7 +82,6 @@ class DBHelper {
 
   }
   Future<List<Map<String, dynamic>>> getAllDictionaries() async {
-    print('ffof');
     final db = await instance.database;
     return await db.query('Dictionaryes');
 
@@ -115,14 +99,12 @@ class DBHelper {
   }
   Future<List<Map<String, dynamic>>> getPinnedWords(int dictionaryId) async {
     final db = await instance.database;
-    print("id= $dictionaryId");
     final b = await db.rawQuery('''
     SELECT i.*
     FROM InfoAboutWord i
     JOIN DictionaryesWords d ON i.id_word = d.id_word
     WHERE d.id = $dictionaryId AND d.is_pinned = 1
   ''');
-    print("query= $b");
     return b;
 
   }
@@ -135,7 +117,6 @@ class DBHelper {
     JOIN DictionaryesWords d ON i.id_word = d.id_word
     WHERE d.id = $dictionaryId AND d.is_pinned = 0
   ''');
-    print("queryUnPinned= $a");
     return a;
 
   }
@@ -150,9 +131,7 @@ class DBHelper {
   }
   Future<List<Map<String, dynamic>>> searchWords(String query) async {
     final db = await instance.database;
-    print("fff");
     var a = await db.query('InfoAboutWord', where: 'name LIKE ?', whereArgs: ['$query%']);
-    print('jg-${a}');
 
     return a;
   }
@@ -160,11 +139,7 @@ class DBHelper {
   Future<List<Map<String, dynamic>>>  searchDictionaries(String query)
     async {
       final db = await instance.database;
-      print("query-");
-      print(query);
       var a =await db.query('Dictionaryes', where: 'name LIKE ?', whereArgs: ['%$query%']);
-      print("a-");
-      print(a);
 
       return a;
 
@@ -198,20 +173,16 @@ class DBHelper {
 
   Future<void> DeleteDictionary(int id) async {
     final db = await instance.database;
-    print("DELETED");
-    print(await db.delete('Dictionaryes', where: 'id = ?', whereArgs: [id]));
     await db.delete('DictionaryesWords', where: 'id = ?', whereArgs: [id]);
   }
   Future<void> ChangeColor(int id, String newColor, int id_dict) async {
     final db = await instance.database;
-    print('ID_WORD=${id}');
     await db.update(
       'DictionaryesWords',
       {'color_word': newColor},
       where: 'id = ? and id_word = ?',
       whereArgs: [id_dict,id],
     );
-    print("COLORED to ${newColor}");
   }
   Future<Map<String, List<int>>> getColorMap(int id_dict) async {
     final db = await instance.database;
@@ -220,7 +191,6 @@ class DBHelper {
       where: 'id = ?',
       whereArgs: [id_dict],
     );
-    print("words==$words");
 
     Map<String, List<int>> colorMap = {};
 
@@ -234,7 +204,6 @@ class DBHelper {
         colorMap[colorWord] = [idWord];
       }
     }
-    print("colorMap==$colorMap");
 
     return colorMap;
   }
@@ -253,24 +222,18 @@ class DBHelper {
   Future<List<Map<String, Object?>>> getAllDictionariesContainWord(id) async{
     final db = await instance.database;
     var a =await db.rawQuery ('Select id from DictionaryesWords Where id_word = $id');
-    print('a---$a');
     return a;
   }
   Future<void> addToDictionary(int id, int idWord) async {
     final db = await instance.database;
-  print('id word = $id and idWord = $idWord');
     var a= await db.insert(
       'DictionaryesWords',
       {'id': id, 'id_word': idWord,'is_pinned':0,'color_word':"ffffff"},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    print('result=$a');
   }
   Future<void> updateDefinition(int id_word,String dictionary, String definition) async {
     final db = await instance.database;
-    print('id_word=$id_word');
-    print('dictionary=$dictionary');
-    print('definition=$definition');
     var a= await db.update(
       'InfoAboutWord',
       {dictionary: definition},
@@ -279,19 +242,16 @@ class DBHelper {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    print('updated=$a');
   }
   Future<void> addDictionaryToDB(String name,id_word) async {
     final db = await instance.database;
     var id = DateTime.now().millisecondsSinceEpoch; // генерируем уникальный идентификатор
-    print('id=$id');
     var a = await db.insert(
       'Dictionaryes',
       {'id': id, 'name': name},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    //addToDictionary(id, id_word);
-    print('result=$a');
+
   }
   Future<void> deleteFromDictionary(int id, int idWord) async {
     final db = await instance.database;
@@ -301,13 +261,11 @@ class DBHelper {
       where: 'id = ? AND id_word = ?',
       whereArgs: [id, idWord],
     );
-    print('deletStatus=$a');
   }
 
 
 
   Future<Map<String, dynamic>?> getWordInfo(String word) async {
-    print('Searching for word: $word');
     final db = await instance.database;
     var resultSet = await db.query('InfoAboutWord', where: 'LOWER(name) = ?', whereArgs: [word.toLowerCase()]);
     if (resultSet.isNotEmpty) {
@@ -370,8 +328,7 @@ class DBHelper {
     if (tableExistsResult.isNotEmpty) {
       var resultSet1 = await db.rawQuery(
           'SELECT MAX(id_word) AS max_id FROM tempWords');
-      print('isnull=$resultSet1');
-      if(resultSet1.first['max_id'] != null)
+      if(resultSet1.first['max_id'] != null &&id_max!=null)
         {
           if(resultSet1.first['max_id'] as int > id_max!){
             id_max=resultSet1.first['max_id'] as int?;

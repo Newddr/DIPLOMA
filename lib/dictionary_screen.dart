@@ -59,10 +59,6 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
         .toList();
      unpinnedWords = loadedWordsUnPinned
         .toList();
-    print('pinnedWords= $pinnedWords');
-    print('loadedWords= $loadedWords');
-    print('loadedWordsUnPinned= $loadedWordsUnPinned');
-    print('unpinned= $unpinnedWords');
     setState(() {
       words = [...pinnedWords, ...unpinnedWords];
     });
@@ -74,7 +70,6 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
   Color getColorFromString(int id) {
     var hexColor ="ffffff";
     for (var entry in colorMap.entries) {
-      print('______________________________ $id');
       if (entry.value.contains(id)) {
         hexColor =  entry.key;
       }
@@ -89,17 +84,11 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
 
     String color="ffffffff";
     fetchData();
-    print("COLORRR=$colorMap");
     for (var entry in colorMap.entries) {
-      print('______________________________ $id');
       if (entry.value.contains(id)) {
         color =  entry.key;
       }
     }
-    print('______________________________');
-    print("COLORRR=$color");
-
-      print("COLOR ==== $color");
       switch(color)
           {
         case "ffff5252":
@@ -125,6 +114,7 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kCardColor,
       appBar: AppBar(
         backgroundColor: kButtonColorSearch,
         title: Text(widget.value),
@@ -157,7 +147,7 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
           },
         )],
       ),
-      body: Container(
+      body: words.isNotEmpty?Container(
         color: kCardColor,
       child:ListView.builder(
         itemCount: words.length,
@@ -165,8 +155,6 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
           bool isSelected = selectedCardIndices.contains(index);
           bool isPinned = pinnedWords.contains(words[index]);
           Color colorWord;
-          print("isPinned= $isPinned");
-          print("words[index] = ${words[index]}");
           return Card(
             color: kCardColor,
             elevation: 0,
@@ -233,7 +221,13 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
             ),
           );
         },
-      ),),
+      ),): Center(
+        child: Text(
+          'В словаре еще нет слов',
+          style: TextStyle(fontSize: 20, color: Colors.grey),
+        ),
+      ),
+
     );
   }
   void _showAddWordWindow(BuildContext context) {
@@ -245,23 +239,27 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
     );
   }
   Map<String, dynamic> _check(index) {
-    print('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF-${words[index]}');
     return words[index];
   }
 
   void _toggleSelection(int index) {
+
     setState(() {
       if (selectedCardIndices.contains(index)) {
         selectedCardIndices.remove(index);
+        if(selectedCardIndices.isEmpty){
+          _resetSelection();}
       } else {
         selectedCardIndices.add(index);
       }
+
+
     });
   }
 
   void _resetSelection() {
     setState(() {
-      if (selectedCardIndices.isNotEmpty) {
+      if (selectedCardIndices.isEmpty) {
         selectedCardIndices = [];
         isAppBarActionsVisible = false;
       }
@@ -269,8 +267,12 @@ class _DictionariesScreenState extends State<DictionariesScreen> {
   }
 
   Future<void> _deleteSelectedWords() async {
-    await DBHelper.instance.deleteFromDictionary(
-        widget.id, words[selectedCardIndices[0]]['id_word']);
+
+    for (var index in selectedCardIndices) {
+      await DBHelper.instance.deleteFromDictionary(
+          widget.id, words[index]['id_word']);
+    }
+
     setState(() {
       words = List.from(words);
       words.removeWhere((word) =>
