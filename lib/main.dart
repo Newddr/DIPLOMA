@@ -696,10 +696,7 @@ class _MainPageState extends State<MainPage> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(left: 20.0),
-                                      child: Expanded(
+                                      Expanded(
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -724,7 +721,7 @@ class _MainPageState extends State<MainPage> {
                                           ],
                                         ),
                                       ),
-                                    ),
+
                                     Container(
                                       width: 60,
                                       height: 60,
